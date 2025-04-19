@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>邮箱查询系统</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>邮箱信息查询</h1>
+    <div class="search-form">
+      <div class="input-group">
+        <input type="text" id="email" placeholder="请输入完整邮箱地址">
+      </div>
+      <div class="input-group password-group">
+        <input type="password" id="email-password" placeholder="请输入访问密码">
+        <button type="button" id="toggle-password" class="toggle-password">
+          <span class="eye-icon">👁️</span>
+        </button>
+      </div>
+      <button id="search-btn">查询邮件</button>
+      <div class="status-container">
+        <div id="polling-status" class="polling-status">
+          <span id="polling-indicator" class="polling-indicator"></span>
+          <span id="status-text">等待查询...</span>
+        </div>
+        <div id="last-check-time" class="last-check-time"></div>
+      </div>
+    </div>
+    
+    <div class="error-message" id="error-message" style="display: none;"></div>
+    <div class="loader" id="loader" style="display: none;">加载中...</div>
+    
+    <div class="results-container" id="results-container">
+      <h2>邮件列表</h2>
+      <div id="email-list"></div>
+    </div>
+    
+    <div id="email-detail" class="email-detail"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html> 

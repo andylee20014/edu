@@ -1,0 +1,64 @@
+{
+  "prefixes": {
+    "user1@medicine.yourweb.csuchico.edu": {
+      "password": "zbOLX2Tx",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user2@medicine.yourweb.csuchico.edu": {
+      "password": "Du6UA4J1",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user3@medicine.yourweb.csuchico.edu": {
+      "password": "rqckP0zB",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user4@medicine.yourweb.csuchico.edu": {
+      "password": "zBQcUqFK",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user5@medicine.yourweb.csuchico.edu": {
+      "password": "C3bxSroZ",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user6@medicine.yourweb.csuchico.edu": {
+      "password": "pbdhNy5v",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user7@medicine.yourweb.csuchico.edu": {
+      "password": "5NQf6NO7",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user8@medicine.yourweb.csuchico.edu": {
+      "password": "e8ehC2XK",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user9@medicine.yourweb.csuchico.edu": {
+      "password": "hdehidLk",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    },
+    "user10@medicine.yourweb.csuchico.edu": {
+      "password": "ntRGAlji",
+      "createdAt": "2025-04-19T07:12:52.261Z",
+      "active": true,
+      "domain": "medicine.yourweb.csuchico.edu"
+    }
+  }
+}

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>邮箱系统测试页面</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Microsoft YaHei', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    select {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-right: 10px;
+      margin-bottom: 20px;
+      min-width: 200px;
+    }
+
+    .mailbox-info {
+      background-color: #eaf7ff;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .email-list {
+      list-style: none;
+    }
+
+    .email-item {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+
+    .email-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .header-label {
+      font-weight: bold;
+      color: #666;
+    }
+
+    .email-body {
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      margin-top: 10px;
+    }
+
+    .loader {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 18px;
+      display: none;
+    }
+
+    .error {
+      color: red;
+      padding: 10px;
+      background: #ffeeee;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    .debug-section {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f0f8ff;
+      border-radius: 8px;
+    }
+
+    .toggle-btn {
+      background-color: #7f8c8d;
+      margin-top: 10px;
+    }
+    
+    .admin-login {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    
+    .admin-login h2 {
+      margin-bottom: 15px;
+    }
+    
+    input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .content-section {
+      display: none;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>邮箱测试工具</h1>
+    <p>此页面用于检查主邮箱中的所有邮件，以查找收发邮件的问题</p>
+    
+    <div id="admin-login" class="admin-login">
+      <h2>管理员验证</h2>
+      <p>请输入管理员密钥以访问测试工具</p>
+      <input type="password" id="admin-key" placeholder="请输入管理员密钥">
+      <button id="login-btn">验证</button>
+      <div id="login-error" class="error" style="display: none;"></div>
+    </div>
+    
+    <div id="content-section" class="content-section">
+      <div class="toolbar">
+        <select id="mailbox-select">
+          <option value="primary">正在加载邮箱...</option>
+        </select>
+        <button id="fetch-emails">获取所有邮件</button>
+      </div>
+      
+      <div id="mailbox-info" class="mailbox-info" style="display: none;"></div>
+      <div id="loader" class="loader">加载中...</div>
+      <div id="error" class="error" style="display: none;"></div>
+      
+      <div id="summary"></div>
+      
+      <h2>邮件列表</h2>
+      <div id="email-list" class="email-list"></div>
+      
+      <div id="debug-section" class="debug-section">
+        <h2>调试信息</h2>
+        <button id="toggle-raw" class="toggle-btn">显示/隐藏原始数据</button>
+        <pre id="raw-data" style="display: none;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const adminKeyInput = document.getElementById('admin-key');
+      const loginBtn = document.getElementById('login-btn');
+      const loginError = document.getElementById('login-error');
+      const adminLogin = document.getElementById('admin-login');
+      const contentSection = document.getElementById('content-section');
+      
+      const mailboxSelect = document.getElementById('mailbox-select');
+      const mailboxInfo = document.getElementById('mailbox-info');
+      const fetchButton = document.getElementById('fetch-emails');
+      const loader = document.getElementById('loader');
+      const errorDiv = document.getElementById('error');
+      const emailList = document.getElementById('email-list');
+      const summary = document.getElementById('summary');
+      const rawDataPre = document.getElementById('raw-data');
+      const toggleRawBtn = document.getElementById('toggle-raw');
+      
+      let emailData = null;
+      let adminKey = '';
+      let mailboxes = [];
+      
+      // 尝试从本地存储获取管理员密钥
+      const savedAdminKey = localStorage.getItem('adminKey');
+      if (savedAdminKey) {
+        adminKey = savedAdminKey;
+        adminKeyInput.value = adminKey;
+        verifyAdminKey(adminKey);
+      }
+      
+      loginBtn.addEventListener('click', () => {
+        const key = adminKeyInput.value.trim();
+        if (!key) {
+          showLoginError('请输入管理员密钥');
+          return;
+        }
+        
+        verifyAdminKey(key);
+      });
+      
+      async function verifyAdminKey(key) {
+        try {
+          const response = await fetch(`/api/admin/prefixes?adminKey=${key}`);
+          
+          if (response.ok) {
+            // 登录成功
+            adminKey = key;
+            localStorage.setItem('adminKey', adminKey);
+            adminLogin.style.display = 'none';
+            contentSection.style.display = 'block';
+            loginError.style.display = 'none';
+            
+            // 加载邮箱列表
+            await loadMailboxes();
+          } else {
+            showLoginError('管理员密钥无效');
+            contentSection.style.display = 'none';
+            localStorage.removeItem('adminKey');
+          }
+        } catch (error) {
+          showLoginError('验证管理员密钥时发生错误');
+          console.error('验证管理员密钥时出错:', error);
+        }
+      }
+      
+      async function loadMailboxes() {
+        try {
+          const response = await fetch(`/api/mailboxes?adminKey=${adminKey}`);
+          
+          if (!response.ok) {
+            throw new Error('获取邮箱列表失败');
+          }
+          
+          const data = await response.json();
+          mailboxes = data.mailboxes || [];
+          
+          // 更新下拉菜单
+          mailboxSelect.innerHTML = '';
+          mailboxes.forEach(mailbox => {
+            const option = document.createElement('option');
+            option.value = mailbox.id;
+            option.textContent = `${mailbox.user} (${mailbox.domain})`;
+            mailboxSelect.appendChild(option);
+          });
+          
+          if (mailboxes.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '没有找到可用邮箱';
+            option.disabled = true;
+            mailboxSelect.appendChild(option);
+          }
+        } catch (error) {
+          console.error('加载邮箱列表时出错:', error);
+          errorDiv.textContent = `错误: ${error.message}`;
+          errorDiv.style.display = 'block';
+        }
+      }
+      
+      function showLoginError(message) {
+        loginError.textContent = message;
+        loginError.style.display = 'block';
+      }
+      
+      mailboxSelect.addEventListener('change', () => {
+        // 清空之前的内容
+        emailList.innerHTML = '';
+        summary.innerHTML = '';
+        mailboxInfo.style.display = 'none';
+        errorDiv.style.display = 'none';
+      });
+      
+      fetchButton.addEventListener('click', async () => {
+        loader.style.display = 'block';
+        errorDiv.style.display = 'none';
+        emailList.innerHTML = '';
+        summary.innerHTML = '';
+        mailboxInfo.style.display = 'none';
+        
+        const selectedMailbox = mailboxSelect.value;
+        if (!selectedMailbox) {
+          errorDiv.textContent = '请选择一个邮箱';
+          errorDiv.style.display = 'block';
+          loader.style.display = 'none';
+          return;
+        }
+        
+        try {
+          const response = await fetch(`/api/test-all-emails?adminKey=${adminKey}&mailbox=${selectedMailbox}`);
+          
+          if (!response.ok) {
+            throw new Error('获取邮件失败，服务器返回错误');
+          }
+          
+          emailData = await response.json();
+          
+          // 显示邮箱信息
+          if (emailData.mailboxInfo) {
+            mailboxInfo.innerHTML = `
+              <div><strong>邮箱ID:</strong> ${emailData.mailboxInfo.id}</div>
+              <div><strong>邮箱账户:</strong> ${emailData.mailboxInfo.user}</div>
+              <div><strong>邮箱域名:</strong> ${emailData.mailboxInfo.domain}</div>
+            `;
+            mailboxInfo.style.display = 'block';
+          }
+          
+          // 显示概要信息
+          if (emailData.emails && emailData.emails.debug) {
+            const totalEmails = emailData.emails.debug.totalEmails;
+            summary.innerHTML = `<p>找到 ${totalEmails} 封邮件</p>`;
+          }
+          
+          // 显示邮件列表
+          if (emailData.emails && emailData.emails.emails) {
+            displayEmails(emailData.emails.emails);
+          }
+          
+          // 设置原始数据
+          rawDataPre.textContent = JSON.stringify(emailData, null, 2);
+          
+        } catch (error) {
+          console.error('获取邮件时出错:', error);
+          errorDiv.textContent = `错误: ${error.message}`;
+          errorDiv.style.display = 'block';
+        } finally {
+          loader.style.display = 'none';
+        }
+      });
+      
+      toggleRawBtn.addEventListener('click', () => {
+        if (rawDataPre.style.display === 'none') {
+          rawDataPre.style.display = 'block';
+        } else {
+          rawDataPre.style.display = 'none';
+        }
+      });
+      
+      function displayEmails(emails) {
+        if (!emails || emails.length === 0) {
+          emailList.innerHTML = '<p>没有找到邮件</p>';
+          return;
+        }
+        
+        emails.forEach((email, index) => {
+          const emailItem = document.createElement('div');
+          emailItem.className = 'email-item';
+          
+          // 获取收件人显示
+          let toDisplay = '未知';
+          if (email.to && email.to.length > 0) {
+            toDisplay = email.to.join(', ');
+          } else if (email.fullParsed && email.fullParsed.to) {
+            if (typeof email.fullParsed.to === 'string') {
+              toDisplay = email.fullParsed.to;
+            } else if (email.fullParsed.to.text) {
+              toDisplay = email.fullParsed.to.text;
+            }
+          }
+          
+          // 获取发件人显示
+          let fromDisplay = '未知';
+          if (email.from && email.from.length > 0) {
+            fromDisplay = email.from.join(', ');
+          } else if (email.fullParsed && email.fullParsed.from) {
+            if (typeof email.fullParsed.from === 'string') {
+              fromDisplay = email.fullParsed.from;
+            } else if (email.fullParsed.from.text) {
+              fromDisplay = email.fullParsed.from.text;
+            }
+          }
+          
+          // 获取主题
+          const subject = email.subject ? email.subject[0] : (email.fullParsed && email.fullParsed.subject ? email.fullParsed.subject : '(无主题)');
+          
+          // 获取日期
+          const date = email.date ? new Date(email.date[0]).toLocaleString('zh-CN') : '未知日期';
+          
+          emailItem.innerHTML = `
+            <div class="email-header">
+              <div>
+                <span class="header-label">序号:</span> ${email.seqno}
+              </div>
+              <div>
+                <span class="header-label">日期:</span> ${date}
+              </div>
+            </div>
+            <div>
+              <div><span class="header-label">发件人:</span> ${fromDisplay}</div>
+              <div><span class="header-label">收件人:</span> ${toDisplay}</div>
+              <div><span class="header-label">主题:</span> ${subject}</div>
+            </div>
+          `;
+          
+          // 如果有邮件内容，添加显示
+          if (email.fullParsed && email.fullParsed.text) {
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'email-body';
+            bodyDiv.textContent = email.fullParsed.text.substring(0, 300) + (email.fullParsed.text.length > 300 ? '...' : '');
+            emailItem.appendChild(bodyDiv);
+          }
+          
+          // 添加完整解析详情的按钮
+          const toggleBtn = document.createElement('button');
+          toggleBtn.className = 'toggle-btn';
+          toggleBtn.textContent = '显示/隐藏详细解析';
+          emailItem.appendChild(toggleBtn);
+          
+          const detailsPre = document.createElement('pre');
+          detailsPre.style.display = 'none';
+          detailsPre.textContent = JSON.stringify(email.fullParsed, null, 2);
+          emailItem.appendChild(detailsPre);
+          
+          toggleBtn.addEventListener('click', () => {
+            detailsPre.style.display = detailsPre.style.display === 'none' ? 'block' : 'none';
+          });
+          
+          emailList.appendChild(emailItem);
+        });
+      }
+    });
+  </script>
+</body>
+</html> 

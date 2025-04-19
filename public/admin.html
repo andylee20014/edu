@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>前缀管理系统</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Microsoft YaHei', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1, h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    .admin-panel {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .error-message {
+      color: #e74c3c;
+      margin-bottom: 15px;
+      display: none;
+      padding: 10px;
+      background-color: #fdecea;
+      border-left: 4px solid #e74c3c;
+      border-radius: 3px;
+      line-height: 1.5;
+    }
+
+    .success-message {
+      color: #2ecc71;
+      margin-bottom: 15px;
+      display: none;
+      padding: 10px;
+      background-color: #eafaf1;
+      border-left: 4px solid #2ecc71;
+      border-radius: 3px;
+      line-height: 1.5;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    .action-buttons button {
+      padding: 3px 6px;
+      margin-right: 3px;
+      font-size: 12px;
+    }
+
+    .delete-btn {
+      background-color: #e74c3c;
+    }
+
+    .delete-btn:hover {
+      background-color: #c0392b;
+    }
+
+    .toggle-btn {
+      background-color: #f39c12;
+    }
+
+    .toggle-btn:hover {
+      background-color: #d35400;
+    }
+
+    .loader {
+      text-align: center;
+      margin: 20px 0;
+      display: none;
+    }
+
+    .domain-display {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #777;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      color: #3498db;
+      cursor: pointer;
+      margin: 0;
+      padding: 0 5px;
+      font-size: 16px;
+    }
+    
+    .copy-btn:hover {
+      color: #2980b9;
+      background: none;
+    }
+    
+    .copy-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 1000;
+    }
+    
+    .copy-toast.show {
+      opacity: 1;
+    }
+
+    .tools-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 15px;
+    }
+    
+    .tool-link {
+      text-decoration: none;
+      color: inherit;
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .tool-card {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      transition: all 0.3s ease;
+    }
+    
+    .tool-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      background: #f0f8ff;
+    }
+    
+    .tool-icon {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    .tool-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    
+    .tool-desc {
+      font-size: 14px;
+      color: #777;
+    }
+
+    .domain-options {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>前缀管理系统</h1>
+    
+    <div id="management-section">
+      <div class="admin-panel">
+        <h2>添加/修改邮箱</h2>
+        <div class="form-group">
+          <label for="prefix">邮箱前缀</label>
+          <input type="text" id="prefix" placeholder="请输入邮箱前缀">
+          <div class="domain-options">
+            <select id="domain-select">
+              <option value="loading">正在加载可用域名...</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="password">访问密码</label>
+          <input type="text" id="password" placeholder="请输入访问密码">
+        </div>
+        <button id="add-prefix-btn">添加/更新</button>
+        <div id="add-error" class="error-message"></div>
+        <div id="add-success" class="success-message"></div>
+
+        <!-- 批量导入功能 -->
+        <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+          <h3>批量导入邮箱</h3>
+          <p style="margin-bottom: 10px; font-size: 14px; color: #666;">
+            每行一个记录，支持以下格式：
+          </p>
+          <div style="margin-bottom: 10px; font-size: 14px; background: #f9f9f9; padding: 10px; border-radius: 4px;">
+            <div><b>格式1：</b> 前缀,密码 (用英文逗号分隔)</div>
+            <div style="color: #777; margin-left: 10px;">例如：user1,123456</div>
+            <div><b>格式2：</b> 前缀 密码 (用空格分隔)</div>
+            <div style="color: #777; margin-left: 10px;">例如：user1 123456</div>
+            <div><b>格式3：</b> 前缀\t密码 (用制表符分隔，适合从Excel复制)</div>
+            <div style="color: #777; margin-left: 10px;">例如：user1[Tab]123456</div>
+          </div>
+          <textarea id="batch-import" rows="8" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: monospace;"></textarea>
+          <div style="margin-top: 10px; display: flex; align-items: center;">
+            <button id="batch-import-btn">批量导入</button>
+            <button id="auto-generate-accounts-btn" style="margin-left: 10px; background-color: #9b59b6;">自动生成邮箱</button>
+            <button id="clear-batch-btn" style="margin-left: 10px; background-color: #7f8c8d;">清空</button>
+            <span id="import-status" style="margin-left: 10px; font-size: 14px;"></span>
+          </div>
+          <div style="margin-top: 10px; font-size: 14px; color: #666;">
+            <label style="display: inline-flex; align-items: center;">
+              <input type="checkbox" id="use-prefix-as-password" style="margin-right: 5px;">
+              使用前缀作为默认密码（当未指定密码时）
+            </label>
+          </div>
+          <div id="batch-error" class="error-message"></div>
+          <div id="batch-success" class="success-message"></div>
+        </div>
+
+        <!-- 自动生成邮箱的配置面板 -->
+        <div id="auto-generate-dialog" style="display: none; margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+          <h4 style="margin-top: 0; margin-bottom: 10px;">自动生成邮箱配置</h4>
+          
+          <div style="margin-bottom: 10px;">
+            <label style="display: block; margin-bottom: 5px;">邮箱数量</label>
+            <input type="number" id="account-count" min="1" max="100" value="10" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          
+          <div style="margin-bottom: 10px;">
+            <label style="display: block; margin-bottom: 5px;">前缀格式</label>
+            <div style="display: flex; align-items: center;">
+              <input type="text" id="prefix-format" value="user" placeholder="前缀基础名" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px;">
+              <span>+数字 (从</span>
+              <input type="number" id="start-number" min="1" value="1" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 0 5px;">
+              <span>开始)</span>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">选择域名</label>
+            <select id="auto-domain-select" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <!-- 将在JS中动态填充域名列表 -->
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 10px;">
+            <label style="display: block; margin-bottom: 5px;">密码选项</label>
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+              <input type="radio" id="prefix-as-password" name="password-option" value="prefix" checked style="margin-right: 5px;">
+              <label for="prefix-as-password">使用前缀作为密码</label>
+            </div>
+            <div style="display: flex; align-items: center;">
+              <input type="radio" id="fixed-password" name="password-option" value="fixed" style="margin-right: 5px;">
+              <label for="fixed-password" style="margin-right: 10px;">固定密码:</label>
+              <input type="text" id="fixed-password-value" placeholder="输入固定密码" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;" disabled>
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+            <button id="cancel-generate" style="margin-right: 10px; background-color: #7f8c8d;">取消</button>
+            <button id="confirm-generate" style="background-color: #27ae60;">生成</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="admin-panel">
+        <h2>邮箱列表</h2>
+        <div style="display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+          <button id="refresh-btn">刷新列表</button>
+          
+          <!-- 在顶部也添加翻页控件 -->
+          <div class="pagination-controls" style="margin-left: 20px; display: flex; align-items: center;">
+            <button id="top-prev-page" style="margin-right: 5px;" disabled>上一页</button>
+            <span id="top-current-page">1</span> / <span id="top-total-pages">1</span>
+            <button id="top-next-page" style="margin-left: 5px;" disabled>下一页</button>
+            
+            <span style="margin-left: 15px;">每页显示:</span>
+            <select id="top-page-size" style="margin-left: 5px;">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+        </div>
+        <div id="loader" class="loader">加载中...</div>
+        <div id="prefix-list">
+          <div class="list-actions" style="margin-bottom: 10px; display: flex; align-items: center;">
+            <label style="display: flex; align-items: center; margin-right: 15px;">
+              <input type="checkbox" id="select-all-checkbox" style="margin-right: 5px;">
+              <span>全选</span>
+            </label>
+            <button id="batch-delete-btn" style="background-color: #e74c3c; display: none;">批量删除</button>
+            <span id="selected-count" style="margin-left: 10px; font-size: 14px;"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 30px;"><input type="checkbox" id="select-all-header"></th>
+                <th>邮箱前缀</th>
+                <th>完整邮箱</th>
+                <th>访问密码</th>
+                <th>创建时间</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="prefix-table-body">
+            </tbody>
+          </table>
+          <div class="pagination" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="pagination-info">显示 <span id="start-index">0</span>-<span id="end-index">0</span> / <span id="total-count">0</span></div>
+            <div class="pagination-controls">
+              <button id="prev-page" style="margin-right: 5px;" disabled>上一页</button>
+              <span id="current-page">1</span> / <span id="total-pages">1</span>
+              <button id="next-page" style="margin-left: 5px;" disabled>下一页</button>
+            </div>
+            <div class="pagination-size">
+              每页显示:
+              <select id="page-size">
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="admin-panel">
+        <h2>系统管理工具</h2>
+        <div class="tools-container">
+          <a href="/test.html" target="_blank" class="tool-link">
+            <div class="tool-card">
+              <div class="tool-icon">📨</div>
+              <div class="tool-title">邮箱测试工具</div>
+              <div class="tool-desc">检查主邮箱中的所有邮件，支持切换不同的主邮箱，用于调试和排查问题</div>
+            </div>
+          </a>
+          <a href="/api/mailboxes?adminKey=${adminKey}" target="_blank" class="tool-link" id="check-mailboxes">
+            <div class="tool-card">
+              <div class="tool-icon">📋</div>
+              <div class="tool-title">查看系统邮箱配置</div>
+              <div class="tool-desc">查看当前系统中配置的所有主邮箱账号信息</div>
+            </div>
+          </a>
+        </div>
+      </div>
+      
+      <!-- 复制提示 -->
+      <div id="copy-toast" class="copy-toast">已复制到剪贴板</div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 添加调试信息
+      console.log('页面加载完成，开始获取DOM元素');
+      
+      // 从环境变量中获取管理员密钥（将通过API请求获取）
+      let adminKey = '';
+      
+      const prefixInput = document.getElementById('prefix');
+      const domainSelect = document.getElementById('domain-select');
+      const passwordInput = document.getElementById('password');
+      const addPrefixBtn = document.getElementById('add-prefix-btn');
+      const addError = document.getElementById('add-error');
+      const addSuccess = document.getElementById('add-success');
+      
+      const refreshBtn = document.getElementById('refresh-btn');
+      const loader = document.getElementById('loader');
+      const prefixTableBody = document.getElementById('prefix-table-body');
+      
+      // 翻页和批量删除相关元素
+      const selectAllCheckbox = document.getElementById('select-all-checkbox');
+      const selectAllHeader = document.getElementById('select-all-header');
+      const batchDeleteBtn = document.getElementById('batch-delete-btn');
+      const selectedCount = document.getElementById('selected-count');
+      const prevPageBtn = document.getElementById('prev-page');
+      const nextPageBtn = document.getElementById('next-page');
+      const currentPageSpan = document.getElementById('current-page');
+      const totalPagesSpan = document.getElementById('total-pages');
+      const startIndexSpan = document.getElementById('start-index');
+      const endIndexSpan = document.getElementById('end-index');
+      const totalCountSpan = document.getElementById('total-count');
+      const pageSizeSelect = document.getElementById('page-size');
+      
+      // 翻页相关变量
+      let currentPage = 1;
+      let pageSize = 100;
+      let prefixesData = {}; // 存储所有前缀数据
+      let totalItems = 0;
+      
+      // 批量导入相关元素
+      const batchImportTextarea = document.getElementById('batch-import');
+      const batchImportBtn = document.getElementById('batch-import-btn');
+      const importStatus = document.getElementById('import-status');
+      const batchError = document.getElementById('batch-error');
+      const batchSuccess = document.getElementById('batch-success');
+      const clearBatchBtn = document.getElementById('clear-batch-btn');
+      const usePrefixAsPasswordCheckbox = document.getElementById('use-prefix-as-password');
+      
+      // 自动生成邮箱相关元素
+      const autoGenerateAccountsBtn = document.getElementById('auto-generate-accounts-btn');
+      const autoGenerateDialog = document.getElementById('auto-generate-dialog');
+      const accountCountInput = document.getElementById('account-count');
+      const prefixFormatInput = document.getElementById('prefix-format');
+      const startNumberInput = document.getElementById('start-number');
+      const autoDomainSelect = document.getElementById('auto-domain-select');
+      const prefixAsPasswordRadio = document.getElementById('prefix-as-password');
+      const fixedPasswordRadio = document.getElementById('fixed-password');
+      const fixedPasswordInput = document.getElementById('fixed-password-value');
+      const cancelGenerateBtn = document.getElementById('cancel-generate');
+      const confirmGenerateBtn = document.getElementById('confirm-generate');
+      
+      // 设置批量导入文本框的默认样式
+      batchImportTextarea.style.fontFamily = 'Consolas, Monaco, "Courier New", monospace';
+      batchImportTextarea.style.fontSize = '14px';
+      batchImportTextarea.style.lineHeight = '1.6';
+      batchImportTextarea.style.padding = '12px';
+      batchImportTextarea.style.backgroundColor = '#f8f9fa';
+      batchImportTextarea.style.border = '1px solid #ddd';
+      batchImportTextarea.style.borderRadius = '4px';
+      batchImportTextarea.style.boxShadow = 'inset 0 1px 3px rgba(0,0,0,0.05)';
+      
+      // 检查元素是否正确获取
+      console.log('元素获取情况：', {
+        autoGenerateAccountsBtn: !!autoGenerateAccountsBtn,
+        autoGenerateDialog: !!autoGenerateDialog,
+        confirmGenerateBtn: !!confirmGenerateBtn,
+        cancelGenerateBtn: !!cancelGenerateBtn
+      });
+      
+      // 如果获取到了按钮，添加调试点击事件
+      if (autoGenerateAccountsBtn) {
+        console.log('已获取自动生成邮箱按钮');
+      }
+      
+      let availableDomains = [];
+      
+      // 初始化页面
+      async function initializePage() {
+        try {
+          // 先获取管理员密钥
+          adminKey = await getAdminKey();
+          console.log('已获取管理员密钥');
+          
+          // 更新链接
+          updateMailboxesLink();
+          
+          // 加载域名列表
+          await loadDomains();
+          
+          // 初始化翻页和批量操作功能
+          initPaginationAndBatchActions();
+          
+          // 加载前缀列表
+          loadPrefixes();
+        } catch (error) {
+          console.error('初始化页面时出错:', error);
+          showError(addError, '初始化页面时出错: ' + error.message);
+        }
+      }
+      
+      // 获取管理员密钥
+      async function getAdminKey() {
+        try {
+          const response = await fetch('/api/admin/key');
+          if (!response.ok) {
+            throw new Error('获取管理员密钥失败，状态码: ' + response.status);
+          }
+          const data = await response.json();
+          return data.adminKey;
+        } catch (error) {
+          console.error('获取管理员密钥时出错:', error);
+          throw new Error('无法获取管理员密钥，请刷新页面重试');
+        }
+      }
+      
+      // 加载可用的域名列表
+      async function loadDomains() {
+        try {
+          const response = await fetch(`/api/mailboxes?adminKey=${adminKey}`);
+          
+          if (!response.ok) {
+            throw new Error('获取邮箱列表失败');
+          }
+          
+          const data = await response.json();
+          availableDomains = data.mailboxes && data.mailboxes.length > 0
+            ? data.mailboxes.map(mailbox => mailbox.domain)
+            : ['wandouyu.digitalscholarship.brown.edu'];
+          
+          // 更新域名下拉菜单
+          domainSelect.innerHTML = '';
+          availableDomains.forEach(domain => {
+            const option = document.createElement('option');
+            option.value = domain;
+            option.textContent = `@${domain}`;
+            domainSelect.appendChild(option);
+          });
+        } catch (error) {
+          console.error('加载域名列表时出错:', error);
+          showError(addError, '加载域名列表时出错，使用默认域名');
+          
+          // 使用默认域名
+          domainSelect.innerHTML = '';
+          const option = document.createElement('option');
+          option.value = 'wandouyu.digitalscholarship.brown.edu';
+          option.textContent = '@wandouyu.digitalscholarship.brown.edu';
+          domainSelect.appendChild(option);
+        }
+      }
+      
+      addPrefixBtn.addEventListener('click', async () => {
+        const prefix = prefixInput.value.trim();
+        const password = passwordInput.value.trim();
+        
+        if (!prefix) {
+          showError(addError, '请输入前缀');
+          return;
+        }
+        
+        if (!password) {
+          showError(addError, '请输入密码');
+          return;
+        }
+        
+        try {
+          const response = await fetch('/api/admin/prefixes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              adminKey,
+              prefix,
+              password
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            // 显示完整邮箱地址
+            const domain = domainSelect.value;
+            const fullEmail = `${prefix}@${domain}`;
+            showSuccess(addSuccess, `${data.message || '前缀添加/更新成功'} (${fullEmail})`);
+            
+            prefixInput.value = '';
+            passwordInput.value = '';
+            
+            // 重新加载前缀列表
+            loadPrefixes();
+          } else {
+            showError(addError, data.error || '添加/更新前缀时出错');
+          }
+        } catch (error) {
+          showError(addError, '连接服务器时出错');
+          console.error('添加/更新前缀时出错:', error);
+        }
+      });
+      
+      refreshBtn.addEventListener('click', () => {
+        currentPage = 1; // 重置到第一页
+        loadPrefixes();
+      });
+      
+      async function loadPrefixes() {
+        loader.style.display = 'block';
+        
+        try {
+          const response = await fetch(`/api/admin/prefixes?adminKey=${adminKey}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            prefixesData = data.prefixes || {};
+            totalItems = Object.keys(prefixesData).length;
+            
+            // 更新分页信息
+            updatePaginationInfo();
+            
+            // 显示当前页的前缀
+            displayCurrentPagePrefixes();
+          } else {
+            showError(addError, '加载前缀列表时出错');
+          }
+        } catch (error) {
+          showError(addError, '连接服务器时出错');
+          console.error('加载前缀列表时出错:', error);
+        } finally {
+          loader.style.display = 'none';
+        }
+      }
+      
+      // 更新分页信息
+      function updatePaginationInfo() {
+        const totalPages = Math.ceil(totalItems / pageSize) || 1;
+        
+        // 确保当前页不超出范围
+        if (currentPage > totalPages) {
+          currentPage = totalPages;
+        } else if (currentPage < 1) {
+          currentPage = 1;
+        }
+        
+        console.log('更新分页信息', { currentPage, totalPages, totalItems });
+        
+        const startIndex = (currentPage - 1) * pageSize + 1;
+        const endIndex = Math.min(startIndex + pageSize - 1, totalItems);
+        
+        // 更新底部页面显示
+        currentPageSpan.textContent = currentPage;
+        totalPagesSpan.textContent = totalPages;
+        startIndexSpan.textContent = totalItems > 0 ? startIndex : 0;
+        endIndexSpan.textContent = endIndex;
+        totalCountSpan.textContent = totalItems;
+        
+        // 更新顶部页面显示
+        const topCurrentPageSpan = document.getElementById('top-current-page');
+        const topTotalPagesSpan = document.getElementById('top-total-pages');
+        if (topCurrentPageSpan) topCurrentPageSpan.textContent = currentPage;
+        if (topTotalPagesSpan) topTotalPagesSpan.textContent = totalPages;
+        
+        // 更新按钮状态 - 底部
+        prevPageBtn.disabled = currentPage <= 1;
+        nextPageBtn.disabled = currentPage >= totalPages;
+        
+        // 更新按钮状态 - 顶部
+        const topPrevPageBtn = document.getElementById('top-prev-page');
+        const topNextPageBtn = document.getElementById('top-next-page');
+        if (topPrevPageBtn) topPrevPageBtn.disabled = currentPage <= 1;
+        if (topNextPageBtn) topNextPageBtn.disabled = currentPage >= totalPages;
+      }
+      
+      // 显示当前页的前缀
+      function displayCurrentPagePrefixes() {
+        prefixTableBody.innerHTML = '';
+        
+        if (!prefixesData || Object.keys(prefixesData).length === 0) {
+          const row = document.createElement('tr');
+          row.innerHTML = '<td colspan="7">没有找到邮箱</td>';
+          prefixTableBody.appendChild(row);
+          
+          // 隐藏批量删除按钮
+          batchDeleteBtn.style.display = 'none';
+          selectAllCheckbox.checked = false;
+          selectAllHeader.checked = false;
+          return;
+        }
+        
+        // 按创建时间排序，最新的排在前面
+        const sortedPrefixes = Object.entries(prefixesData).sort((a, b) => {
+          return new Date(b[1].createdAt) - new Date(a[1].createdAt);
+        });
+        
+        // 获取当前页的前缀
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const currentPagePrefixes = sortedPrefixes.slice(startIndex, endIndex);
+        
+        // 获取允许的域名列表
+        fetch(`/api/mailboxes?adminKey=${adminKey}`)
+          .then(response => response.json())
+          .then(data => {
+            // 获取当前选择的域名或使用第一个域名
+            let currentDomain = domainSelect.value;
+            let availableDomains = [];
+            
+            if (data.mailboxes && data.mailboxes.length > 0) {
+              availableDomains = data.mailboxes.map(mailbox => mailbox.domain);
+              if (!currentDomain && availableDomains.length > 0) {
+                currentDomain = availableDomains[0];
+              }
+            }
+            
+            // 确保至少有一个域名可用
+            if (!currentDomain) {
+              currentDomain = 'wandouyu.digitalscholarship.brown.edu';
+            }
+            
+            // 渲染前缀列表，只使用一个域名
+            for (const [prefix, data] of currentPagePrefixes) {
+              renderPrefixRow(prefix, data, currentDomain);
+            }
+            
+            // 添加事件处理程序
+            addEventHandlers();
+          })
+          .catch(error => {
+            console.error('获取域名列表时出错:', error);
+            // 使用默认域名
+            const defaultDomain = 'wandouyu.digitalscholarship.brown.edu';
+            
+            // 渲染当前页的前缀
+            for (const [prefix, data] of currentPagePrefixes) {
+              renderPrefixRow(prefix, data, defaultDomain);
+            }
+            
+            // 添加事件处理程序
+            addEventHandlers();
+          });
+        
+        // 重置选择状态
+        updateSelectionStatus();
+      }
+      
+      // 辅助函数，渲染单个前缀行
+      function renderPrefixRow(prefix, data, domain) {
+        const row = document.createElement('tr');
+        row.dataset.prefix = prefix;
+        
+        const fullEmail = `${prefix}@${domain}`;
+        const createdAt = new Date(data.createdAt).toLocaleString('zh-CN');
+        const status = data.active ? '启用' : '禁用';
+        
+        // 邮箱显示 - 只显示主域名，而不是所有域名
+        const emailsHtml = `
+          ${fullEmail}
+          <button class="copy-btn" data-copy="${fullEmail}" title="复制邮箱">📋</button>
+        `;
+        
+        // 将操作按钮放在同一行，使用更紧凑的样式
+        const actionButtons = `
+          <button class="toggle-btn" data-prefix="${prefix}" data-active="${!data.active}" style="padding: 3px 6px; font-size: 12px;">
+            ${data.active ? '禁用' : '启用'}
+          </button>
+          <button class="delete-btn" data-prefix="${prefix}" style="padding: 3px 6px; font-size: 12px;">删除</button>
+          <button class="copy-btn" data-copy="${fullEmail}&&${data.password}" title="复制邮箱和密码" style="padding: 3px 6px; font-size: 12px;">复制全部</button>
+        `;
+        
+        row.innerHTML = `
+          <td><input type="checkbox" class="row-checkbox" data-prefix="${prefix}"></td>
+          <td>${prefix}</td>
+          <td>${emailsHtml}</td>
+          <td>
+            ${data.password}
+            <button class="copy-btn" data-copy="${data.password}" title="复制密码">📋</button>
+          </td>
+          <td>${createdAt}</td>
+          <td>${status}</td>
+          <td class="action-buttons" style="white-space: nowrap;">${actionButtons}</td>
+        `;
+        
+        prefixTableBody.appendChild(row);
+      }
+      
+      // 添加事件处理程序
+      function addEventHandlers() {
+        // 添加复制按钮事件
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const text = btn.getAttribute('data-copy');
+            
+            // 如果包含&&，代表需要格式化复制多个内容
+            let copyText = text;
+            if (text.includes('&&')) {
+              const [email, password] = text.split('&&');
+              copyText = `邮箱: ${email}\n密码: ${password}`;
+            }
+            
+            copyToClipboard(copyText);
+            showCopyToast();
+          });
+        });
+        
+        // 添加删除按钮事件
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const prefix = btn.getAttribute('data-prefix');
+            if (confirm(`确定要删除前缀 "${prefix}" 吗？`)) {
+              await deletePrefix(prefix);
+            }
+          });
+        });
+        
+        // 添加切换状态按钮事件
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const prefix = btn.getAttribute('data-prefix');
+            const active = btn.getAttribute('data-active') === 'true';
+            await togglePrefixStatus(prefix, active);
+          });
+        });
+        
+        // 添加行选择框事件
+        document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+          checkbox.addEventListener('change', () => {
+            updateSelectionStatus();
+          });
+        });
+      }
+      
+      async function deletePrefix(prefix) {
+        try {
+          const response = await fetch(`/api/admin/prefixes/${prefix}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ adminKey })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            showSuccess(addSuccess, data.message || `前缀 ${prefix} 已删除`);
+            loadPrefixes();
+          } else {
+            showError(addError, data.error || '删除前缀时出错');
+          }
+        } catch (error) {
+          showError(addError, '连接服务器时出错');
+          console.error('删除前缀时出错:', error);
+        }
+      }
+      
+      async function togglePrefixStatus(prefix, active) {
+        try {
+          const response = await fetch(`/api/admin/prefixes/${prefix}/status`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+              adminKey,
+              active
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            showSuccess(addSuccess, data.message || `前缀 ${prefix} 状态已更新`);
+            loadPrefixes();
+          } else {
+            showError(addError, data.error || '更新前缀状态时出错');
+          }
+        } catch (error) {
+          showError(addError, '连接服务器时出错');
+          console.error('更新前缀状态时出错:', error);
+        }
+      }
+      
+      // 复制到剪贴板
+      function copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = 0;
+        document.body.appendChild(textarea);
+        textarea.select();
+        
+        try {
+          document.execCommand('copy');
+        } catch (err) {
+          console.error('复制失败:', err);
+        }
+        
+        document.body.removeChild(textarea);
+      }
+      
+      // 显示复制提示
+      function showCopyToast() {
+        const toast = document.getElementById('copy-toast');
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 2000);
+      }
+      
+      function showError(element, message) {
+        element.innerHTML = message.replace(/\n/g, '<br>');
+        element.style.display = 'block';
+        setTimeout(() => {
+          element.style.display = 'none';
+        }, 5000);
+      }
+      
+      function showSuccess(element, message) {
+        element.innerHTML = message.replace(/\n/g, '<br>');
+        element.style.display = 'block';
+        setTimeout(() => {
+          element.style.display = 'none';
+        }, 5000);
+      }
+      
+      // 显示信息提示
+      function showInfo(element, message) {
+        element.innerHTML = message.replace(/\n/g, '<br>');
+        element.style.display = 'block';
+      }
+      
+      // 更新动态生成的mailboxes链接
+      function updateMailboxesLink() {
+        const checkMailboxesLink = document.getElementById('check-mailboxes');
+        if (checkMailboxesLink) {
+          checkMailboxesLink.href = `/api/mailboxes?adminKey=${adminKey}`;
+        }
+      }
+      
+      // 自动生成邮箱功能相关事件处理
+      
+      // 清空按钮
+      clearBatchBtn.addEventListener('click', () => {
+        if (batchImportTextarea.value.trim() && !confirm('确定要清空输入框内容吗？')) {
+          return;
+        }
+        
+        batchImportTextarea.value = '';
+        importStatus.textContent = '';
+        batchError.style.display = 'none';
+        batchSuccess.style.display = 'none';
+      });
+      
+      // 生成邮箱列表函数
+      function generateEmails(count, prefixBase, startNumber, domain, passwordType, fixedPassword = '') {
+        const accounts = [];
+        for (let i = 0; i < count; i++) {
+          const number = startNumber + i;
+          const prefix = `${prefixBase}${number}`;
+          const fullEmail = `${prefix}@${domain}`; // 完整邮箱地址
+          
+          // 根据密码类型生成密码
+          let password;
+          if (passwordType === 'prefix') {
+            password = prefix;
+          } else if (passwordType === 'fixed') {
+            password = fixedPassword;
+          } else {
+            password = prefix; // 默认使用前缀作为密码
+          }
+          
+          // 返回完整邮箱和密码
+          accounts.push(`${fullEmail},${password}`);
+        }
+        return accounts;
+      }
+      
+      // 直接用onclick属性绑定事件，避免重复绑定
+      autoGenerateAccountsBtn.onclick = function() {
+        console.log('自动生成邮箱按钮被点击');
+        // 初始化域名下拉菜单
+        updateAutoDomainSelect();
+        // 显示配置对话框
+        autoGenerateDialog.style.display = 'block';
+      };
+      
+      // 取消生成
+      cancelGenerateBtn.onclick = function() {
+        console.log('取消生成按钮被点击');
+        autoGenerateDialog.style.display = 'none';
+      };
+      
+      // 固定密码选项状态管理
+      fixedPasswordRadio.onchange = function() {
+        fixedPasswordInput.disabled = !fixedPasswordRadio.checked;
+        if (fixedPasswordRadio.checked) {
+          fixedPasswordInput.focus();
+        }
+      };
+      
+      prefixAsPasswordRadio.onchange = function() {
+        fixedPasswordInput.disabled = true;
+      };
+      
+      // 确认生成邮箱
+      confirmGenerateBtn.onclick = function() {
+        console.log('确认生成按钮被点击');
+        
+        // 获取配置参数
+        const count = parseInt(accountCountInput.value) || 10;
+        const prefixBase = prefixFormatInput.value.trim() || 'user';
+        const startNumber = parseInt(startNumberInput.value) || 1;
+        const domain = autoDomainSelect.value;
+        
+        console.log('生成参数:', {count, prefixBase, startNumber, domain});
+        
+        // 检查参数有效性
+        if (count <= 0 || count > 100) {
+          showError(batchError, '邮箱数量必须在1-100之间');
+          return;
+        }
+        
+        if (!prefixBase) {
+          showError(batchError, '前缀格式不能为空');
+          return;
+        }
+        
+        // 确定密码类型
+        let passwordType = 'prefix';
+        let fixedPassword = '';
+        
+        if (randomPasswordRadio.checked) {
+          passwordType = 'random';
+        } else if (prefixAsPasswordRadio.checked) {
+          passwordType = 'prefix';
+        } else if (fixedPasswordRadio.checked) {
+          passwordType = 'fixed';
+          fixedPassword = fixedPasswordInput.value.trim();
+          
+          if (!fixedPassword) {
+            showError(batchError, '请输入固定密码');
+            return;
+          }
+        }
+        
+        console.log('密码类型:', passwordType);
+        
+        try {
+          // 生成邮箱列表
+          const accounts = generateEmails(count, prefixBase, startNumber, domain, passwordType, fixedPassword);
+          console.log('生成的账号:', accounts);
+          
+          // 使用制表符分隔的格式填充到批量导入文本框，使显示更整齐
+          batchImportTextarea.value = accounts.join('\n');
+          
+          // 隐藏对话框并显示成功消息
+          autoGenerateDialog.style.display = 'none';
+          
+          // 美化显示
+          formatBatchTextarea();
+          
+          // 显示详细的成功信息
+          let passwordTypeText = '与前缀相同的密码';
+          if (passwordType === 'fixed') {
+            passwordTypeText = `固定密码 "${fixedPassword}"`;
+          }
+          
+          showSuccess(batchSuccess, `已生成 ${count} 个邮箱账号
+- 格式: ${prefixBase}${startNumber} ~ ${prefixBase}${startNumber + count - 1}@${domain}
+- 密码类型: ${passwordTypeText}`);
+          
+          // 更新导入状态提示
+          importStatus.textContent = `已准备好 ${count} 个邮箱账号，可点击"批量导入"按钮导入系统`;
+          importStatus.style.color = '#27ae60';
+        } catch (error) {
+          console.error('生成邮箱时出错:', error);
+          showError(batchError, '生成邮箱时出错: ' + error.message);
+        }
+      };
+      
+      // 格式化批量导入文本框内容，使其看起来更美观
+      function formatBatchTextarea() {
+        const lines = batchImportTextarea.value.trim().split('\n');
+        if (lines.length === 0) return;
+        
+        // 设置文本框样式为等宽字体，便于对齐
+        batchImportTextarea.style.fontFamily = 'Consolas, Monaco, "Courier New", monospace';
+        batchImportTextarea.style.fontSize = '14px';
+        batchImportTextarea.style.lineHeight = '1.6';
+        batchImportTextarea.style.padding = '12px';
+        batchImportTextarea.style.backgroundColor = '#f8f9fa';
+        batchImportTextarea.style.border = '1px solid #ddd';
+        batchImportTextarea.style.borderRadius = '4px';
+        batchImportTextarea.style.boxShadow = 'inset 0 1px 3px rgba(0,0,0,0.05)';
+        
+        // 为了保持美观，我们可以确保所有行都保持原样，不添加额外的格式化
+        // 但是可以按照固定格式展示，如果需要的话
+      }
+      
+      // 更新自动生成的域名下拉菜单
+      function updateAutoDomainSelect() {
+        // 先清空现有选项
+        autoDomainSelect.innerHTML = '';
+        
+        // 使用已加载的可用域名列表
+        if (availableDomains && availableDomains.length > 0) {
+          availableDomains.forEach(domain => {
+            const option = document.createElement('option');
+            option.value = domain;
+            option.textContent = `@${domain}`;
+            autoDomainSelect.appendChild(option);
+          });
+        } else {
+          // 如果尚未加载域名或无可用域名，使用默认域名
+          const option = document.createElement('option');
+          option.value = 'wandouyu.digitalscholarship.brown.edu';
+          option.textContent = '@wandouyu.digitalscholarship.brown.edu';
+          autoDomainSelect.appendChild(option);
+        }
+      }
+
+      // 批量导入功能
+      batchImportBtn.addEventListener('click', async () => {
+        const batchData = batchImportTextarea.value.trim();
+        
+        if (!batchData) {
+          showError(batchError, '请输入要导入的数据');
+          return;
+        }
+        
+        // 解析输入数据，每行一条记录，支持多种格式
+        const lines = batchData.split(/\r?\n/).filter(line => line.trim());
+        
+        if (lines.length === 0) {
+          showError(batchError, '没有找到有效的导入记录');
+          return;
+        }
+        
+        // 显示批量导入提示
+        showInfo(importStatus, '正在处理批量导入请求...');
+        importStatus.style.color = '#3498db';
+        
+        const records = [];
+        const invalidLines = [];
+        const usePrefixAsPassword = usePrefixAsPasswordCheckbox.checked;
+        
+        // 解析每一行
+        lines.forEach((line, index) => {
+          // 支持多种分隔符：逗号、空格、制表符
+          let parts = [];
+          
+          if (line.includes(',')) {
+            // 逗号分隔
+            parts = line.split(',').map(part => part.trim());
+          } else if (line.includes('\t')) {
+            // Tab分隔
+            parts = line.split('\t').map(part => part.trim());
+          } else {
+            // 空格分隔
+            parts = line.split(/\s+/).filter(Boolean);
+          }
+          
+          // 提取邮箱（可能包含完整邮箱地址）和密码
+          let emailOrPrefix = parts[0];
+          let password = parts[1];
+          
+          // 解析邮箱地址
+          let prefix, domain;
+          if (emailOrPrefix && emailOrPrefix.includes('@')) {
+            // 提取邮箱中的前缀和域名部分
+            const emailParts = emailOrPrefix.split('@');
+            prefix = emailParts[0];
+            domain = emailParts[1];
+            console.log('检测到完整邮箱，提取前缀:', prefix, '域名:', domain);
+          } else {
+            // 只有前缀，没有域名
+            prefix = emailOrPrefix;
+            domain = null;
+          }
+          
+          // 如果没有密码但启用了"使用前缀作为密码"选项
+          if (!password && usePrefixAsPassword && prefix) {
+            password = prefix;
+          }
+          
+          if (!prefix || (parts.length !== 2 && !usePrefixAsPassword)) {
+            invalidLines.push(`第 ${index + 1} 行: ${line}`);
+          } else {
+            records.push({
+              prefix: prefix,
+              password: password || prefix, // 如果没有密码，使用前缀作为密码
+              domain: domain // 可能为null
+            });
+          }
+        });
+        
+        // 如果有无效行，显示错误
+        if (invalidLines.length > 0) {
+          const message = `以下 ${invalidLines.length} 行格式无效，请修改后重试:\n${invalidLines.join('\n')}`;
+          showError(batchError, message);
+          return;
+        }
+        
+        // 开始批量导入
+        importStatus.textContent = `正在导入 ${records.length} 条记录...`;
+        
+        try {
+          console.log('发送批量导入请求，数据:', { recordsCount: records.length });
+          // 使用新的批量API
+          const response = await fetch('/api/admin/batch-prefixes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              adminKey,
+              records
+            })
+          });
+          
+          // 即使不是200状态码也先获取响应内容
+          const responseText = await response.text();
+          console.log('服务器响应:', responseText);
+          
+          // 尝试解析JSON
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (e) {
+            console.error('响应不是有效的JSON:', responseText);
+            showError(batchError, '服务器返回了无效的响应格式');
+            return;
+          }
+          
+          if (response.ok) {
+            if (data.failedCount > 0) {
+              const failMessage = `成功导入 ${data.successCount} 条记录，失败 ${data.failedCount} 条:\n` +
+                data.failedRecords.map(r => `- ${r.prefix}: ${r.reason}`).join('\n');
+              showError(batchError, failMessage);
+            } else {
+              showSuccess(batchSuccess, `成功导入所有 ${data.successCount} 条记录!`);
+              batchImportTextarea.value = ''; // 清空输入框
+            }
+            
+            importStatus.innerHTML = `导入完成: ${data.successCount}/${records.length} 成功`;
+            importStatus.style.color = '#27ae60';
+            
+            // 重新加载前缀列表
+            loadPrefixes();
+          } else {
+            showError(batchError, data.error || `批量导入时出错，状态码: ${response.status}`);
+          }
+        } catch (error) {
+          console.error('批量导入时出错:', error);
+          showError(batchError, '连接服务器时出错: ' + error.message);
+        }
+      });
+
+      // 批量删除选中的邮箱
+      async function deleteSelectedPrefixes() {
+        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+        
+        if (selectedCount === 0) {
+          showError(addError, '请先选择要删除的邮箱');
+          return;
+        }
+        
+        if (!confirm(`确定要删除选中的 ${selectedCount} 个邮箱吗？`)) {
+          return;
+        }
+        
+        const prefixes = Array.from(selectedCheckboxes).map(checkbox => 
+          checkbox.getAttribute('data-prefix')
+        );
+        
+        let successCount = 0;
+        let failedCount = 0;
+        
+        // 显示处理状态
+        importStatus.textContent = `正在批量删除 (0/${prefixes.length})...`;
+        importStatus.style.color = '#3498db';
+        
+        // 循环处理每个前缀
+        for (let i = 0; i < prefixes.length; i++) {
+          const prefix = prefixes[i];
+          importStatus.textContent = `正在批量删除 (${i+1}/${prefixes.length})...`;
+          
+          try {
+            const response = await fetch(`/api/admin/prefixes/${prefix}`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ adminKey })
+            });
+            
+            if (response.ok) {
+              successCount++;
+            } else {
+              failedCount++;
+            }
+          } catch (error) {
+            failedCount++;
+            console.error(`删除前缀 ${prefix} 时出错:`, error);
+          }
+        }
+        
+        // 显示处理结果
+        if (failedCount > 0) {
+          showError(addError, `批量删除完成: 成功 ${successCount}，失败 ${failedCount}`);
+        } else {
+          showSuccess(addSuccess, `成功删除所有 ${successCount} 个选中的邮箱`);
+        }
+        
+        // 重新加载前缀列表
+        loadPrefixes();
+      }
+      
+      // 更新选择状态
+      function updateSelectionStatus() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const checkedCount = checkedBoxes.length;
+        
+        // 更新全选框状态
+        if (checkboxes.length > 0 && checkedCount === checkboxes.length) {
+          selectAllCheckbox.checked = true;
+          selectAllHeader.checked = true;
+        } else {
+          selectAllCheckbox.checked = false;
+          selectAllHeader.checked = false;
+        }
+        
+        // 更新选中数量显示
+        if (checkedCount > 0) {
+          selectedCount.textContent = `已选择 ${checkedCount} 项`;
+          batchDeleteBtn.style.display = 'inline-block';
+        } else {
+          selectedCount.textContent = '';
+          batchDeleteBtn.style.display = 'none';
+        }
+      }
+      
+      // 添加翻页和全选相关事件
+      function initPaginationAndBatchActions() {
+        // 底部翻页事件
+        prevPageBtn.addEventListener('click', () => {
+          console.log('点击前一页', currentPage);
+          if (currentPage > 1) {
+            currentPage--;
+            updatePaginationInfo();
+            displayCurrentPagePrefixes();
+          }
+        });
+        
+        nextPageBtn.addEventListener('click', () => {
+          console.log('点击后一页', currentPage);
+          const totalPages = Math.ceil(totalItems / pageSize) || 1;
+          if (currentPage < totalPages) {
+            currentPage++;
+            updatePaginationInfo();
+            displayCurrentPagePrefixes();
+          }
+        });
+        
+        // 顶部翻页事件
+        const topPrevPageBtn = document.getElementById('top-prev-page');
+        const topNextPageBtn = document.getElementById('top-next-page');
+        const topCurrentPageSpan = document.getElementById('top-current-page');
+        const topTotalPagesSpan = document.getElementById('top-total-pages');
+        const topPageSizeSelect = document.getElementById('top-page-size');
+        
+        topPrevPageBtn.addEventListener('click', () => {
+          console.log('点击顶部前一页', currentPage);
+          if (currentPage > 1) {
+            currentPage--;
+            updatePaginationInfo();
+            displayCurrentPagePrefixes();
+          }
+        });
+        
+        topNextPageBtn.addEventListener('click', () => {
+          console.log('点击顶部后一页', currentPage);
+          const totalPages = Math.ceil(totalItems / pageSize) || 1;
+          if (currentPage < totalPages) {
+            currentPage++;
+            updatePaginationInfo();
+            displayCurrentPagePrefixes();
+          }
+        });
+        
+        // 同步顶部和底部的页面大小选择
+        topPageSizeSelect.value = pageSizeSelect.value;
+        
+        // 页面大小变更事件 - 底部
+        pageSizeSelect.addEventListener('change', () => {
+          pageSize = parseInt(pageSizeSelect.value);
+          topPageSizeSelect.value = pageSizeSelect.value; // 同步顶部选择
+          currentPage = 1; // 重置到第一页
+          updatePaginationInfo();
+          displayCurrentPagePrefixes();
+        });
+        
+        // 页面大小变更事件 - 顶部
+        topPageSizeSelect.addEventListener('change', () => {
+          pageSize = parseInt(topPageSizeSelect.value);
+          pageSizeSelect.value = topPageSizeSelect.value; // 同步底部选择
+          currentPage = 1; // 重置到第一页
+          updatePaginationInfo();
+          displayCurrentPagePrefixes();
+        });
+        
+        // 全选事件
+        selectAllCheckbox.addEventListener('change', () => {
+          const isChecked = selectAllCheckbox.checked;
+          document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+          });
+          selectAllHeader.checked = isChecked;
+          updateSelectionStatus();
+        });
+        
+        selectAllHeader.addEventListener('change', () => {
+          const isChecked = selectAllHeader.checked;
+          document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+          });
+          selectAllCheckbox.checked = isChecked;
+          updateSelectionStatus();
+        });
+        
+        // 批量删除事件
+        batchDeleteBtn.addEventListener('click', deleteSelectedPrefixes);
+      }
+
+      // 在页面加载完成后调用初始化函数
+      initializePage();
+    });
+  </script>
+</body>
+</html>
