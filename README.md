@@ -137,12 +137,14 @@ ALLOWED_DOMAINS=domain.com,domain2.com  # 允许的域名列表，用逗号分�
 
 ### 服务器部署
 
-由于系统使用本地JSON文件存储和IMAP长连接，建议部署在传统服务器上而非Vercel等无状态平台。
+由于系统使用本地JSON文件存储和IMAP长连接，建议部署在传统服务器上而非Vercel等无状态平台。以下指南针对CentOS 8系统，其他Linux发行版可能需要调整相应命令。
+
+> **注意**: CentOS 8已于2021年12月31日结束生命周期。建议考虑使用Rocky Linux 8或AlmaLinux 8作为替代，这些系统与CentOS 8高度兼容，命令基本相同。
 
 #### 1. 服务器准备
 
 1. **购买服务器**：
-   - 推荐配置：1-2核CPU、2GB内存、Ubuntu 20.04/22.04 LTS
+   - 推荐配置：1-2核CPU、2GB内存、CentOS 8
 
 2. **域名设置**（可选）：
    - 购买域名并设置DNS A记录指向服务器IP
@@ -156,13 +158,14 @@ ssh root@你的服务器IP
 
 更新系统:
 ```bash
-apt update && apt upgrade -y
+dnf update -y
 ```
 
 创建非root用户（可选但推荐）:
 ```bash
-adduser appuser
-usermod -aG sudo appuser
+useradd -m appuser
+passwd appuser
+usermod -aG wheel appuser
 su - appuser
 ```
 
@@ -170,13 +173,17 @@ su - appuser
 
 安装Node.js:
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-sudo apt-get install -y nodejs
+# 安装Node.js源
+sudo dnf module install nodejs:16 -y
+
+# 或者使用官方脚本
+# curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
+# sudo dnf install -y nodejs
 ```
 
 安装Git:
 ```bash
-sudo apt install git -y
+sudo dnf install git -y
 ```
 
 安装PM2（进程管理器）:
@@ -225,12 +232,12 @@ pm2 save
 
 安装Nginx:
 ```bash
-sudo apt install nginx -y
+sudo dnf install nginx -y
 ```
 
 创建配置文件:
 ```bash
-sudo nano /etc/nginx/sites-available/email-system
+sudo nano /etc/nginx/conf.d/email-system.conf
 ```
 
 配置内容:
@@ -252,16 +259,16 @@ server {
 
 启用配置:
 ```bash
-sudo ln -s /etc/nginx/sites-available/email-system /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
 ```
 
 #### 6. 配置HTTPS（强烈推荐）
 
 安装Certbot:
 ```bash
-sudo apt install certbot python3-certbot-nginx -y
+sudo dnf install epel-release -y
+sudo dnf install certbot python3-certbot-nginx -y
 ```
 
 获取SSL证书:
@@ -273,10 +280,12 @@ sudo certbot --nginx -d yourdomain.com
 
 配置防火墙:
 ```bash
-sudo ufw allow ssh
-sudo ufw allow http
-sudo ufw allow https
-sudo ufw enable
+sudo systemctl start firewalld
+sudo systemctl enable firewalld
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
 ```
 
 #### 8. 维护与更新
@@ -309,14 +318,23 @@ nano ~/backup.sh
 #!/bin/bash
 DATE=$(date +%Y-%m-%d)
 cp ~/email-system/data/prefixes.json ~/backups/prefixes-$DATE.json
+
+# 保留最近30天的备份，删除更早的
+find ~/backups -name "prefixes-*.json" -type f -mtime +30 -delete
 ```
 
 设置定期任务:
 ```bash
 chmod +x ~/backup.sh
+
+# 编辑crontab
 crontab -e
+
 # 添加以下行（每天凌晨3点备份）
 0 3 * * * /home/appuser/backup.sh
+
+# 如果遇到权限问题，可以使用绝对路径
+# 0 3 * * * /bin/bash /home/appuser/backup.sh
 ```
 
 ## API文档
@@ -401,7 +419,18 @@ Body: { email, password }
 
 ### 服务器部署问题
 - **应用无法启动**: 检查 `pm2 logs email-system` 查看错误日志
-- **无法访问网站**: 检查 Nginx 配置和防火墙设置
+- **无法访问网站**: 
+  - 检查 Nginx 状态：`sudo systemctl status nginx`
+  - 检查防火墙设置：`sudo firewall-cmd --list-all`
+  - 检查SELinux状态：`sudo sestatus`（如果启用，可能需要配置允许Nginx访问）
+- **SELinux问题**: 如果遇到权限问题，可以尝试设置SELinux上下文或临时禁用：
+  ```bash
+  # 允许Nginx作为反向代理
+  sudo setsebool -P httpd_can_network_connect 1
+  
+  # 或临时禁用SELinux（不推荐生产环境）
+  sudo setenforce 0
+  ```
 - **SSL证书问题**: 运行 `sudo certbot --nginx` 重新配置证书
 
 ## 贡献与开发
