@@ -368,11 +368,25 @@
             
             <div style="margin-bottom: 10px;">
               <label style="display: block; margin-bottom: 5px;">前缀格式</label>
-              <div style="display: flex; align-items: center;">
+              <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <input type="radio" id="format-sequential" name="prefix-format-type" value="sequential" checked style="margin-right: 5px;">
+                <label for="format-sequential">序列格式</label>
+              </div>
+              <div style="display: flex; align-items: center; margin-bottom: 10px;">
                 <input type="text" id="prefix-format" value="user" placeholder="前缀基础名" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px;">
                 <span>+数字 (从</span>
                 <input type="number" id="start-number" min="1" value="1" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 0 5px;">
                 <span>开始)</span>
+              </div>
+              
+              <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <input type="radio" id="format-random" name="prefix-format-type" value="random" style="margin-right: 5px;">
+                <label for="format-random">随机前缀</label>
+              </div>
+              <div style="display: flex; align-items: center; margin-left: 20px; margin-bottom: 5px;">
+                <label style="margin-right: 10px;">长度:</label>
+                <input type="number" id="random-prefix-length" min="4" max="12" value="6" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <span style="margin-left: 10px; font-size: 12px; color: #666;">(生成4-12个字符的随机前缀)</span>
               </div>
             </div>
             
@@ -888,11 +902,22 @@
         const row = document.createElement('tr');
         row.dataset.prefix = prefix;
         
-        const fullEmail = `${prefix}@${domain}`;
+        // 检查前缀是否已包含域名
+        let displayPrefix = prefix;
+        let fullEmail = prefix;
+        if (prefix.includes('@')) {
+          // 前缀已经是完整邮箱格式，不需要再添加域名
+          fullEmail = prefix;
+          displayPrefix = prefix.split('@')[0]; // 只显示@前面的部分作为前缀
+        } else {
+          // 前缀不包含域名，添加域名
+          fullEmail = `${prefix}@${domain}`;
+        }
+        
         const createdAt = new Date(data.createdAt).toLocaleString('zh-CN');
         const status = data.active ? '启用' : '禁用';
         
-        // 邮箱显示 - 只显示主域名，而不是所有域名
+        // 邮箱显示
         const emailsHtml = `
           ${fullEmail}
           <button class="copy-btn" data-copy="${fullEmail}" title="复制邮箱">📋</button>
@@ -909,7 +934,7 @@
         
         row.innerHTML = `
           <td><input type="checkbox" class="row-checkbox" data-prefix="${prefix}"></td>
-          <td>${prefix}</td>
+          <td>${displayPrefix}</td>
           <td>${emailsHtml}</td>
           <td>
             ${data.password}
@@ -1096,9 +1121,31 @@
       // 生成邮箱列表函数
       function generateEmails(count, prefixBase, startNumber, domain, passwordType, fixedPassword = '') {
         const accounts = [];
+        
+        // 检查是否是随机前缀模式
+        const isRandomPrefix = document.getElementById('format-random').checked;
+        const randomPrefixLength = parseInt(document.getElementById('random-prefix-length').value) || 6;
+        
         for (let i = 0; i < count; i++) {
-          const number = startNumber + i;
-          const prefix = `${prefixBase}${number}`;
+          let prefix;
+          
+          if (isRandomPrefix) {
+            // 生成随机前缀
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let randomPrefix = '';
+            const length = Math.max(4, Math.min(12, randomPrefixLength)); // 限制长度在4-12之间
+            
+            for (let j = 0; j < length; j++) {
+              randomPrefix += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            prefix = randomPrefix;
+          } else {
+            // 使用序列前缀
+            const number = startNumber + i;
+            prefix = `${prefixBase}${number}`;
+          }
+          
           const fullEmail = `${prefix}@${domain}`; // 完整邮箱地址
           
           // 根据密码类型生成密码
@@ -1159,20 +1206,45 @@
         
         // 获取配置参数
         const count = parseInt(accountCountInput.value) || 10;
-        const prefixBase = prefixFormatInput.value.trim() || 'user';
-        const startNumber = parseInt(startNumberInput.value) || 1;
+        const isRandomPrefix = document.getElementById('format-random').checked;
+        
+        // 根据选择的前缀类型获取参数
+        let prefixBase = '';
+        let startNumber = 1;
+        let randomPrefixLength = 6;
+        
+        if (isRandomPrefix) {
+          // 随机前缀模式
+          randomPrefixLength = parseInt(document.getElementById('random-prefix-length').value) || 6;
+          if (randomPrefixLength < 4 || randomPrefixLength > 12) {
+            showError(batchError, '随机前缀长度必须在4-12之间');
+            return;
+          }
+        } else {
+          // 序列前缀模式
+          prefixBase = prefixFormatInput.value.trim() || 'user';
+          startNumber = parseInt(startNumberInput.value) || 1;
+          
+          if (!prefixBase) {
+            showError(batchError, '前缀格式不能为空');
+            return;
+          }
+        }
+        
         const domain = autoDomainSelect.value;
         
-        console.log('生成参数:', {count, prefixBase, startNumber, domain});
+        console.log('生成参数:', {
+          count, 
+          isRandomPrefix, 
+          prefixBase, 
+          startNumber, 
+          randomPrefixLength,
+          domain
+        });
         
         // 检查参数有效性
         if (count <= 0 || count > 100) {
           showError(batchError, '邮箱数量必须在1-100之间');
-          return;
-        }
-        
-        if (!prefixBase) {
-          showError(batchError, '前缀格式不能为空');
           return;
         }
         
@@ -1211,6 +1283,10 @@
           formatBatchTextarea();
           
           // 显示详细的成功信息
+          let prefixTypeText = isRandomPrefix 
+            ? `随机前缀 (${randomPrefixLength}个字符)` 
+            : `序列前缀 ${prefixBase}${startNumber} ~ ${prefixBase}${startNumber + count - 1}`;
+            
           let passwordTypeText = '与前缀相同的密码';
           if (passwordType === 'fixed') {
             passwordTypeText = `固定密码 "${fixedPassword}"`;
@@ -1219,7 +1295,7 @@
           }
           
           showSuccess(batchSuccess, `已生成 ${count} 个邮箱账号
-- 格式: ${prefixBase}${startNumber} ~ ${prefixBase}${startNumber + count - 1}@${domain}
+- 格式: ${prefixTypeText}@${domain}
 - 密码类型: ${passwordTypeText}`);
           
           // 更新导入状态提示
@@ -1586,6 +1662,27 @@
         // 批量删除事件
         batchDeleteBtn.addEventListener('click', deleteSelectedPrefixes);
       }
+
+      // 格式选择相关事件处理
+      document.getElementById('format-sequential').addEventListener('change', function() {
+        const prefixFormatInput = document.getElementById('prefix-format');
+        const startNumberInput = document.getElementById('start-number');
+        
+        if (this.checked) {
+          prefixFormatInput.disabled = false;
+          startNumberInput.disabled = false;
+        }
+      });
+      
+      document.getElementById('format-random').addEventListener('change', function() {
+        const prefixFormatInput = document.getElementById('prefix-format');
+        const startNumberInput = document.getElementById('start-number');
+        
+        if (this.checked) {
+          prefixFormatInput.disabled = true;
+          startNumberInput.disabled = true;
+        }
+      });
 
       // 在页面加载完成后调用初始化函数
       initializePage();
