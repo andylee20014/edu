@@ -38,8 +38,8 @@
 
 1. 克隆项目代码
 ```bash
-git clone <仓库地址>
-cd <项目文件夹>
+git clone https://github.com/username/email-system.git  # 替换为实际仓库地址
+cd email-system
 ```
 
 2. 安装依赖
@@ -51,6 +51,7 @@ npm install
 将`.env.example`复制为`.env`，并根据实际情况修改配置：
 ```bash
 cp .env.example .env
+nano .env  # 或使用其他编辑器如vim
 ```
 
 4. 确保数据目录存在
@@ -60,7 +61,7 @@ mkdir -p data
 
 5. 启动服务
 ```bash
-npm start
+npm start  # 或直接使用 node server.js
 ```
 
 ## 配置说明
@@ -71,7 +72,7 @@ npm start
 ```
 PORT=3000                         # 服务器端口
 PREFIX_DB_PATH=./data/prefixes.json  # 前缀数据库路径
-ADMIN_KEY=your_admin_key          # 管理员密钥
+ADMIN_KEY=your_admin_key          # 管理员密钥 (避免使用特殊字符，可能导致认证问题)
 ```
 
 ### 邮箱配置
@@ -98,9 +99,16 @@ ALLOWED_DOMAINS=domain.com,domain2.com  # 允许的域名列表，用逗号分�
 
 ## 使用说明
 
-### 管理员界面
+### 访问系统
 
-访问`http://localhost:3000/admin.html`进入管理员界面，系统会自动读取环境变量中的管理员密钥进行身份验证。
+- **管理员界面**：`http://您的域名或IP:端口/admin.html`
+- **用户界面**：`http://您的域名或IP:端口/`
+
+### 管理员登录
+
+1. 访问管理员界面
+2. 输入在`.env`文件中设置的`ADMIN_KEY`
+3. 点击"登录"按钮
 
 ### 添加/修改邮箱前缀
 
@@ -118,16 +126,151 @@ ALLOWED_DOMAINS=domain.com,domain2.com  # 允许的域名列表，用逗号分�
 3. 制表符分隔：`前缀[Tab]密码`（适合从Excel复制）
 4. 完整邮箱格式：`前缀@域名,密码`（例如：`user1@domain.com,123456`）
 
+**操作步骤**：
+1. 在批量导入文本框中粘贴数据
+2. 根据需要勾选"使用前缀作为默认密码"选项
+3. 点击"批量导入"按钮
+
 ### 自动生成邮箱
 
 1. 点击"自动生成邮箱"按钮
-2. 配置邮箱数量、前缀格式、起始编号和域名
-3. 选择密码选项（使用前缀作为密码或固定密码）
-4. 点击"生成"按钮
+2. 配置参数：
+   - 邮箱数量（建议不超过100个）
+   - 前缀格式（如"user"）
+   - 起始编号（如1）
+   - 选择域名
+   - 密码选项（使用前缀作为密码、随机密码或固定密码）
+3. 点击"生成"按钮
+4. 生成的邮箱将显示在批量导入文本框中，点击"批量导入"按钮完成导入
+
+### 管理已有邮箱
+
+- **查看列表**：账号列表分页显示，可调整每页显示数量
+- **刷新列表**：点击"刷新列表"按钮
+- **复制信息**：点击邮箱或密码旁边的复制图标
+- **批量操作**：使用复选框选择多个账号，然后执行批量删除
+- **切换状态**：点击"启用/禁用"按钮修改账号状态
+- **删除账号**：点击"删除"按钮
 
 ### 查看邮件（用户界面）
 
-用户可以通过`http://localhost:3000`访问前端界面，使用已授权的邮箱前缀和密码登录查看邮件。
+1. 访问用户界面
+2. 输入完整邮箱地址和密码
+3. 点击"登录"按钮查看邮件
+
+## 常用维护命令
+
+### 本地开发与调试
+
+```bash
+# 普通启动
+node server.js
+
+# 使用nodemon自动重启（开发模式）
+npx nodemon server.js
+
+# 查看应用日志
+tail -f logs/app.log  # 如果配置了日志文件
+```
+
+### 服务器运维命令
+
+```bash
+# 查看运行状态
+pm2 status
+
+# 查看应用日志
+pm2 logs email-system
+
+# 查看实时日志
+pm2 logs email-system --lines 100
+
+# 重启应用
+pm2 restart email-system
+
+# 停止应用
+pm2 stop email-system
+
+# 删除应用（完全停止）
+pm2 delete email-system
+
+# 启动应用（单实例模式）
+pm2 start server.js --name email-system
+
+# 设置开机自启
+pm2 save
+pm2 startup
+```
+
+### 数据管理
+
+```bash
+# 手动备份数据
+cp ./data/prefixes.json ./data/prefixes_backup_$(date +%Y%m%d).json
+
+# 恢复数据
+cp ./data/prefixes_backup_YYYYMMDD.json ./data/prefixes.json
+
+# 查看数据文件内容
+cat ./data/prefixes.json | jq .  # 如果安装了jq工具
+```
+
+### Nginx相关命令
+
+```bash
+# 查看Nginx状态
+sudo systemctl status nginx
+
+# 启动Nginx
+sudo systemctl start nginx
+
+# 重启Nginx
+sudo systemctl restart nginx
+
+# 重新加载配置（不中断服务）
+sudo systemctl reload nginx
+
+# 检查Nginx配置
+sudo nginx -t
+
+# 查看错误日志
+sudo tail -f /var/log/nginx/error.log
+```
+
+### 防火墙相关命令
+
+```bash
+# 查看防火墙状态
+sudo firewall-cmd --state
+
+# 查看开放端口
+sudo firewall-cmd --list-all
+
+# 临时开放端口
+sudo firewall-cmd --add-port=3000/tcp
+
+# 永久开放端口
+sudo firewall-cmd --permanent --add-port=3000/tcp
+sudo firewall-cmd --reload
+```
+
+### Git与代码更新
+
+```bash
+# 更新代码
+cd ~/email-system
+git pull
+
+# 如果有本地修改冲突
+git stash
+git pull
+git stash pop  # 尝试恢复本地修改
+
+# 完全覆盖本地修改（谨慎使用）
+git fetch --all
+git reset --hard origin/main  # 或origin/master，取决于分支名
+git pull
+```
 
 ## 部署指南
 
@@ -144,7 +287,7 @@ ALLOWED_DOMAINS=domain.com,domain2.com  # 允许的域名列表，用逗号分�
 #### 1. 服务器准备
 
 1. **购买服务器**：
-   - 推荐配置：1-2核CPU、2GB内存、CentOS 8
+   - 推荐配置：1-2核CPU、2GB内存、CentOS 8/Rocky Linux 8/AlmaLinux 8
 
 2. **域名设置**（可选）：
    - 购买域名并设置DNS A记录指向服务器IP
@@ -196,7 +339,7 @@ sudo npm install -g pm2
 克隆代码:
 ```bash
 cd ~
-git clone <仓库URL> email-system
+git clone https://github.com/username/email-system.git  # 替换为实际仓库地址
 cd email-system
 ```
 
@@ -253,6 +396,16 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+    }
+
+    # API请求特别配置（避免跨域问题）
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
@@ -337,6 +490,39 @@ crontab -e
 # 0 3 * * * /bin/bash /home/appuser/backup.sh
 ```
 
+## 高级设置
+
+### SMTP邮件设置
+
+如需开启邮件发送功能，在`.env`文件中配置SMTP参数：
+
+```
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_email@example.com
+SMTP_PASS=your_password
+SMTP_SECURE=false  # true for 465, false for other ports
+```
+
+### 修改管理员密钥
+
+如果需要更改管理员密钥：
+
+1. 编辑`.env`文件
+```bash
+nano .env
+```
+
+2. 修改ADMIN_KEY的值（避免使用特殊字符，可能导致认证问题）
+```
+ADMIN_KEY=new_admin_key
+```
+
+3. 重启应用
+```bash
+pm2 restart email-system
+```
+
 ## API文档
 
 ### 前缀管理API
@@ -405,20 +591,32 @@ Body: { email, password }
 }
 ```
 
-## 故障排除
+## 常见问题与故障排除
+
+### 修改环境变量后不生效
+- 确保修改.env文件后已重启应用：`pm2 restart email-system`
+- 检查.env文件是否有语法错误：引号不匹配、特殊字符等
+
+### 管理员密钥无效
+- 避免在ADMIN_KEY中使用特殊字符，可能导致认证问题
+- 检查浏览器开发者工具(F12)中的网络请求，确认密钥传递正确
 
 ### 邮件无法加载
 - 检查邮箱配置是否正确
 - 确认IMAP服务器是否可访问
-- 查看服务器日志了解详细错误信息
+- 查看服务器日志了解详细错误信息：`pm2 logs email-system`
+- 检查防火墙是否允许IMAP连接：`sudo firewall-cmd --list-all`
+- 验证邮箱凭据是否正确：在其他邮件客户端尝试登录
 
 ### 批量导入失败
 - 确认导入格式是否正确
 - 检查管理员密钥是否有效
-- 查看浏览器控制台获取更多错误信息
+- 查看浏览器控制台获取更多错误信息：按F12打开开发者工具
+- 查看服务器日志：`pm2 logs email-system`
 
 ### 服务器部署问题
 - **应用无法启动**: 检查 `pm2 logs email-system` 查看错误日志
+- **端口冲突**: 使用 `sudo ss -tulpn | grep 3000` 检查端口是否被占用
 - **无法访问网站**: 
   - 检查 Nginx 状态：`sudo systemctl status nginx`
   - 检查防火墙设置：`sudo firewall-cmd --list-all`
@@ -432,6 +630,19 @@ Body: { email, password }
   sudo setenforce 0
   ```
 - **SSL证书问题**: 运行 `sudo certbot --nginx` 重新配置证书
+
+## 性能优化建议
+
+1. **增加缓存层**：对频繁读取的数据添加内存缓存
+2. **分页加载**：大量邮件使用分页加载，避免一次加载过多
+3. **压缩响应**：添加gzip压缩减少传输量
+4. **监控资源**：定期检查CPU、内存使用情况
+   ```bash
+   # 查看系统资源
+   top
+   free -h
+   df -h
+   ```
 
 ## 贡献与开发
 

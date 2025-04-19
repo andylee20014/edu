@@ -232,215 +232,305 @@
     .domain-options {
       margin-bottom: 10px;
     }
+
+    .pagination-info {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    /* 管理员登录样式 */
+    .admin-login {
+      max-width: 500px;
+      margin: 100px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    
+    .admin-login h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    
+    .admin-login input {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    .admin-login button {
+      width: 100%;
+      padding: 15px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .admin-login .error-message {
+      margin-top: 15px;
+    }
+    
+    .admin-content {
+      display: none; /* 默认隐藏管理内容 */
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>前缀管理系统</h1>
+    <!-- 管理员登录部分 -->
+    <div id="admin-login" class="admin-login">
+      <h2>前缀管理系统 - 管理员登录</h2>
+      <input type="password" id="admin-key-input" placeholder="请输入管理员密钥">
+      <button id="login-btn">登录</button>
+      <div id="login-error" class="error-message"></div>
+    </div>
     
-    <div id="management-section">
-      <div class="admin-panel">
-        <h2>添加/修改邮箱</h2>
-        <div class="form-group">
-          <label for="prefix">邮箱前缀</label>
-          <input type="text" id="prefix" placeholder="请输入邮箱前缀">
-          <div class="domain-options">
-            <select id="domain-select">
-              <option value="loading">正在加载可用域名...</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="password">访问密码</label>
-          <input type="text" id="password" placeholder="请输入访问密码">
-        </div>
-        <button id="add-prefix-btn">添加/更新</button>
-        <div id="add-error" class="error-message"></div>
-        <div id="add-success" class="success-message"></div>
-
-        <!-- 批量导入功能 -->
-        <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-          <h3>批量导入邮箱</h3>
-          <p style="margin-bottom: 10px; font-size: 14px; color: #666;">
-            每行一个记录，支持以下格式：
-          </p>
-          <div style="margin-bottom: 10px; font-size: 14px; background: #f9f9f9; padding: 10px; border-radius: 4px;">
-            <div><b>格式1：</b> 前缀,密码 (用英文逗号分隔)</div>
-            <div style="color: #777; margin-left: 10px;">例如：user1,123456</div>
-            <div><b>格式2：</b> 前缀 密码 (用空格分隔)</div>
-            <div style="color: #777; margin-left: 10px;">例如：user1 123456</div>
-            <div><b>格式3：</b> 前缀\t密码 (用制表符分隔，适合从Excel复制)</div>
-            <div style="color: #777; margin-left: 10px;">例如：user1[Tab]123456</div>
-          </div>
-          <textarea id="batch-import" rows="8" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: monospace;"></textarea>
-          <div style="margin-top: 10px; display: flex; align-items: center;">
-            <button id="batch-import-btn">批量导入</button>
-            <button id="auto-generate-accounts-btn" style="margin-left: 10px; background-color: #9b59b6;">自动生成邮箱</button>
-            <button id="clear-batch-btn" style="margin-left: 10px; background-color: #7f8c8d;">清空</button>
-            <span id="import-status" style="margin-left: 10px; font-size: 14px;"></span>
-          </div>
-          <div style="margin-top: 10px; font-size: 14px; color: #666;">
-            <label style="display: inline-flex; align-items: center;">
-              <input type="checkbox" id="use-prefix-as-password" style="margin-right: 5px;">
-              使用前缀作为默认密码（当未指定密码时）
-            </label>
-          </div>
-          <div id="batch-error" class="error-message"></div>
-          <div id="batch-success" class="success-message"></div>
-        </div>
-
-        <!-- 自动生成邮箱的配置面板 -->
-        <div id="auto-generate-dialog" style="display: none; margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
-          <h4 style="margin-top: 0; margin-bottom: 10px;">自动生成邮箱配置</h4>
-          
-          <div style="margin-bottom: 10px;">
-            <label style="display: block; margin-bottom: 5px;">邮箱数量</label>
-            <input type="number" id="account-count" min="1" max="100" value="10" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-          </div>
-          
-          <div style="margin-bottom: 10px;">
-            <label style="display: block; margin-bottom: 5px;">前缀格式</label>
-            <div style="display: flex; align-items: center;">
-              <input type="text" id="prefix-format" value="user" placeholder="前缀基础名" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px;">
-              <span>+数字 (从</span>
-              <input type="number" id="start-number" min="1" value="1" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 0 5px;">
-              <span>开始)</span>
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px;">选择域名</label>
-            <select id="auto-domain-select" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-              <!-- 将在JS中动态填充域名列表 -->
-            </select>
-          </div>
-          
-          <div style="margin-bottom: 10px;">
-            <label style="display: block; margin-bottom: 5px;">密码选项</label>
-            <div style="display: flex; align-items: center; margin-bottom: 5px;">
-              <input type="radio" id="prefix-as-password" name="password-option" value="prefix" checked style="margin-right: 5px;">
-              <label for="prefix-as-password">使用前缀作为密码</label>
-            </div>
-            <div style="display: flex; align-items: center;">
-              <input type="radio" id="fixed-password" name="password-option" value="fixed" style="margin-right: 5px;">
-              <label for="fixed-password" style="margin-right: 10px;">固定密码:</label>
-              <input type="text" id="fixed-password-value" placeholder="输入固定密码" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;" disabled>
-            </div>
-          </div>
-          
-          <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
-            <button id="cancel-generate" style="margin-right: 10px; background-color: #7f8c8d;">取消</button>
-            <button id="confirm-generate" style="background-color: #27ae60;">生成</button>
-          </div>
-        </div>
+    <!-- 管理内容部分 - 默认隐藏 -->
+    <div id="admin-content" class="admin-content">
+      <h1>前缀管理系统</h1>
+      <div class="tools-container">
+        <a href="/" class="tool-link" target="_blank">
+          <button style="width: 100%;">前往前缀登录页面</button>
+        </a>
+        <a href="#" id="mailboxes-link" class="tool-link" target="_blank">
+          <button style="width: 100%;">查看全部邮件</button>
+        </a>
       </div>
       
-      <div class="admin-panel">
-        <h2>邮箱列表</h2>
-        <div style="display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
-          <button id="refresh-btn">刷新列表</button>
-          
-          <!-- 在顶部也添加翻页控件 -->
-          <div class="pagination-controls" style="margin-left: 20px; display: flex; align-items: center;">
-            <button id="top-prev-page" style="margin-right: 5px;" disabled>上一页</button>
-            <span id="top-current-page">1</span> / <span id="top-total-pages">1</span>
-            <button id="top-next-page" style="margin-left: 5px;" disabled>下一页</button>
+      <div id="management-section">
+        <div class="admin-panel">
+          <h2>添加/修改邮箱</h2>
+          <div class="form-group">
+            <label for="prefix">邮箱前缀</label>
+            <input type="text" id="prefix" placeholder="请输入邮箱前缀">
+            <div class="domain-options">
+              <select id="domain-select">
+                <option value="loading">正在加载可用域名...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="password">访问密码</label>
+            <input type="text" id="password" placeholder="请输入访问密码">
+          </div>
+          <button id="add-prefix-btn">添加/更新</button>
+          <div id="add-error" class="error-message"></div>
+          <div id="add-success" class="success-message"></div>
+
+          <!-- 批量导入功能 -->
+          <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+            <h3>批量导入邮箱</h3>
+            <p style="margin-bottom: 10px; font-size: 14px; color: #666;">
+              每行一个记录，支持以下格式：
+            </p>
+            <div style="margin-bottom: 10px; font-size: 14px; background: #f9f9f9; padding: 10px; border-radius: 4px;">
+              <div><b>格式1：</b> 前缀,密码 (用英文逗号分隔)</div>
+              <div style="color: #777; margin-left: 10px;">例如：user1,123456</div>
+              <div><b>格式2：</b> 前缀 密码 (用空格分隔)</div>
+              <div style="color: #777; margin-left: 10px;">例如：user1 123456</div>
+              <div><b>格式3：</b> 前缀\t密码 (用制表符分隔，适合从Excel复制)</div>
+              <div style="color: #777; margin-left: 10px;">例如：user1[Tab]123456</div>
+            </div>
+            <textarea id="batch-import" rows="8" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: monospace;"></textarea>
+            <div style="margin-top: 10px; display: flex; align-items: center;">
+              <button id="batch-import-btn">批量导入</button>
+              <button id="auto-generate-accounts-btn" style="margin-left: 10px; background-color: #9b59b6;">自动生成邮箱</button>
+              <button id="clear-batch-btn" style="margin-left: 10px; background-color: #7f8c8d;">清空</button>
+              <span id="import-status" style="margin-left: 10px; font-size: 14px;"></span>
+            </div>
+            <div style="margin-top: 10px; font-size: 14px; color: #666;">
+              <label style="display: inline-flex; align-items: center;">
+                <input type="checkbox" id="use-prefix-as-password" style="margin-right: 5px;">
+                使用前缀作为默认密码（当未指定密码时）
+              </label>
+            </div>
+            <div id="batch-error" class="error-message"></div>
+            <div id="batch-success" class="success-message"></div>
+          </div>
+
+          <!-- 自动生成邮箱的配置面板 -->
+          <div id="auto-generate-dialog" style="display: none; margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+            <h4 style="margin-top: 0; margin-bottom: 10px;">自动生成邮箱配置</h4>
             
-            <span style="margin-left: 15px;">每页显示:</span>
-            <select id="top-page-size" style="margin-left: 5px;">
-              <option value="50">50</option>
-              <option value="100" selected>100</option>
-              <option value="200">200</option>
-            </select>
+            <div style="margin-bottom: 10px;">
+              <label style="display: block; margin-bottom: 5px;">邮箱数量</label>
+              <input type="number" id="account-count" min="1" max="100" value="10" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+              <label style="display: block; margin-bottom: 5px;">前缀格式</label>
+              <div style="display: flex; align-items: center;">
+                <input type="text" id="prefix-format" value="user" placeholder="前缀基础名" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px;">
+                <span>+数字 (从</span>
+                <input type="number" id="start-number" min="1" value="1" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 0 5px;">
+                <span>开始)</span>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px;">选择域名</label>
+              <select id="auto-domain-select" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <!-- 将在JS中动态填充域名列表 -->
+              </select>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+              <label style="display: block; margin-bottom: 5px;">密码选项</label>
+              <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <input type="radio" id="prefix-as-password" name="password-option" value="prefix" checked style="margin-right: 5px;">
+                <label for="prefix-as-password">使用前缀作为密码</label>
+              </div>
+              <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <input type="radio" id="random-password" name="password-option" value="random" style="margin-right: 5px;">
+                <label for="random-password">使用随机密码</label>
+              </div>
+              <div style="display: flex; align-items: center;">
+                <input type="radio" id="fixed-password" name="password-option" value="fixed" style="margin-right: 5px;">
+                <label for="fixed-password" style="margin-right: 10px;">固定密码:</label>
+                <input type="text" id="fixed-password-value" placeholder="输入固定密码" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;" disabled>
+              </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+              <button id="cancel-generate" style="margin-right: 10px; background-color: #7f8c8d;">取消</button>
+              <button id="confirm-generate" style="background-color: #27ae60;">生成</button>
+            </div>
           </div>
         </div>
-        <div id="loader" class="loader">加载中...</div>
-        <div id="prefix-list">
-          <div class="list-actions" style="margin-bottom: 10px; display: flex; align-items: center;">
-            <label style="display: flex; align-items: center; margin-right: 15px;">
-              <input type="checkbox" id="select-all-checkbox" style="margin-right: 5px;">
-              <span>全选</span>
-            </label>
-            <button id="batch-delete-btn" style="background-color: #e74c3c; display: none;">批量删除</button>
-            <span id="selected-count" style="margin-left: 10px; font-size: 14px;"></span>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 30px;"><input type="checkbox" id="select-all-header"></th>
-                <th>邮箱前缀</th>
-                <th>完整邮箱</th>
-                <th>访问密码</th>
-                <th>创建时间</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="prefix-table-body">
-            </tbody>
-          </table>
-          <div class="pagination" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-            <div class="pagination-info">显示 <span id="start-index">0</span>-<span id="end-index">0</span> / <span id="total-count">0</span></div>
-            <div class="pagination-controls">
-              <button id="prev-page" style="margin-right: 5px;" disabled>上一页</button>
-              <span id="current-page">1</span> / <span id="total-pages">1</span>
-              <button id="next-page" style="margin-left: 5px;" disabled>下一页</button>
-            </div>
-            <div class="pagination-size">
-              每页显示:
-              <select id="page-size">
+        
+        <div class="admin-panel">
+          <h2>邮箱列表</h2>
+          <div style="display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+            <button id="refresh-btn">刷新列表</button>
+            
+            <!-- 在顶部也添加翻页控件 -->
+            <div class="pagination-controls" style="margin-left: 20px; display: flex; align-items: center;">
+              <button id="top-prev-page" style="margin-right: 5px;" disabled>上一页</button>
+              <span id="top-current-page">1</span> / <span id="top-total-pages">1</span>
+              <button id="top-next-page" style="margin-left: 5px;" disabled>下一页</button>
+              
+              <span style="margin-left: 15px;">每页显示:</span>
+              <select id="top-page-size" style="margin-left: 5px;">
                 <option value="50">50</option>
                 <option value="100" selected>100</option>
                 <option value="200">200</option>
               </select>
             </div>
           </div>
-        </div>
-      </div>
-      
-      <div class="admin-panel">
-        <h2>系统管理工具</h2>
-        <div class="tools-container">
-          <a href="/test.html" target="_blank" class="tool-link">
-            <div class="tool-card">
-              <div class="tool-icon">📨</div>
-              <div class="tool-title">邮箱测试工具</div>
-              <div class="tool-desc">检查主邮箱中的所有邮件，支持切换不同的主邮箱，用于调试和排查问题</div>
+          <div id="loader" class="loader">加载中...</div>
+          <div id="prefix-list">
+            <div class="list-actions" style="margin-bottom: 10px; display: flex; align-items: center;">
+              <label style="display: flex; align-items: center; margin-right: 15px;">
+                <input type="checkbox" id="select-all-checkbox" style="margin-right: 5px;">
+                <span>全选</span>
+              </label>
+              <button id="batch-delete-btn" style="background-color: #e74c3c; display: none;">批量删除</button>
+              <span id="selected-count" style="margin-left: 10px; font-size: 14px;"></span>
             </div>
-          </a>
-          <a href="/api/mailboxes?adminKey=${adminKey}" target="_blank" class="tool-link" id="check-mailboxes">
-            <div class="tool-card">
-              <div class="tool-icon">📋</div>
-              <div class="tool-title">查看系统邮箱配置</div>
-              <div class="tool-desc">查看当前系统中配置的所有主邮箱账号信息</div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 30px;"><input type="checkbox" id="select-all-header"></th>
+                  <th>邮箱前缀</th>
+                  <th>完整邮箱</th>
+                  <th>访问密码</th>
+                  <th>创建时间</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="prefix-table-body">
+              </tbody>
+            </table>
+            <div class="pagination" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+              <div class="pagination-info">显示 <span id="start-index">0</span>-<span id="end-index">0</span> / <span id="total-count">0</span></div>
+              <div class="pagination-controls">
+                <button id="prev-page" style="margin-right: 5px;" disabled>上一页</button>
+                <span id="current-page">1</span> / <span id="total-pages">1</span>
+                <button id="next-page" style="margin-left: 5px;" disabled>下一页</button>
+              </div>
+              <div class="pagination-size">
+                每页显示:
+                <select id="page-size">
+                  <option value="50">50</option>
+                  <option value="100" selected>100</option>
+                  <option value="200">200</option>
+                </select>
+              </div>
             </div>
-          </a>
+          </div>
         </div>
+        
+        <div class="admin-panel">
+          <h2>系统管理工具</h2>
+          <div class="tools-container">
+            <a href="/test.html" target="_blank" class="tool-link">
+              <div class="tool-card">
+                <div class="tool-icon">📨</div>
+                <div class="tool-title">邮箱测试工具</div>
+                <div class="tool-desc">检查主邮箱中的所有邮件，支持切换不同的主邮箱，用于调试和排查问题</div>
+              </div>
+            </a>
+            <a href="/api/mailboxes?adminKey=${adminKey}" target="_blank" class="tool-link" id="check-mailboxes">
+              <div class="tool-card">
+                <div class="tool-icon">📋</div>
+                <div class="tool-title">查看系统邮箱配置</div>
+                <div class="tool-desc">查看当前系统中配置的所有主邮箱账号信息</div>
+              </div>
+            </a>
+          </div>
+        </div>
+        
+        <!-- 复制提示 -->
+        <div id="copy-toast" class="copy-toast">已复制到剪贴板</div>
       </div>
-      
-      <!-- 复制提示 -->
-      <div id="copy-toast" class="copy-toast">已复制到剪贴板</div>
     </div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // 添加调试信息
-      console.log('页面加载完成，开始获取DOM元素');
-      
-      // 从环境变量中获取管理员密钥（将通过API请求获取）
-      let adminKey = '';
-      
+      // 后台管理相关元素
       const prefixInput = document.getElementById('prefix');
-      const domainSelect = document.getElementById('domain-select');
       const passwordInput = document.getElementById('password');
+      const domainSelect = document.getElementById('domain-select');
       const addPrefixBtn = document.getElementById('add-prefix-btn');
+      const refreshBtn = document.getElementById('refresh-btn');
+      const prefixesTable = document.getElementById('prefix-table-body');
+      const prefixesBody = document.getElementById('prefix-table-body');
       const addError = document.getElementById('add-error');
       const addSuccess = document.getElementById('add-success');
-      
-      const refreshBtn = document.getElementById('refresh-btn');
       const loader = document.getElementById('loader');
-      const prefixTableBody = document.getElementById('prefix-table-body');
+      
+      // 管理员登录相关元素
+      const adminLoginSection = document.getElementById('admin-login');
+      const adminContentSection = document.getElementById('admin-content');
+      const adminKeyInput = document.getElementById('admin-key-input');
+      const loginBtn = document.getElementById('login-btn');
+      const loginError = document.getElementById('login-error');
+      
+      // 邮箱管理工具
+      const mailboxesLink = document.getElementById('mailboxes-link');
+      
+      // 批量导入相关元素
+      const batchImportBtn = document.getElementById('batch-import-btn');
+      const batchImportDialog = document.getElementById('batch-import-dialog');
+      const batchImportTextarea = document.getElementById('batch-import');
+      const confirmBatchImportBtn = document.getElementById('confirm-batch-import');
+      const cancelBatchImportBtn = document.getElementById('clear-batch-btn');
+      const usePrefixAsPasswordCheckbox = document.getElementById('use-prefix-as-password');
+      
+      // 定义变量
+      let adminKey = '';
+      let prefixesData = {};
       
       // 翻页和批量删除相关元素
       const selectAllCheckbox = document.getElementById('select-all-checkbox');
@@ -459,17 +549,12 @@
       // 翻页相关变量
       let currentPage = 1;
       let pageSize = 100;
-      let prefixesData = {}; // 存储所有前缀数据
-      let totalItems = 0;
+      let availableDomains = [];
       
       // 批量导入相关元素
-      const batchImportTextarea = document.getElementById('batch-import');
-      const batchImportBtn = document.getElementById('batch-import-btn');
       const importStatus = document.getElementById('import-status');
       const batchError = document.getElementById('batch-error');
       const batchSuccess = document.getElementById('batch-success');
-      const clearBatchBtn = document.getElementById('clear-batch-btn');
-      const usePrefixAsPasswordCheckbox = document.getElementById('use-prefix-as-password');
       
       // 自动生成邮箱相关元素
       const autoGenerateAccountsBtn = document.getElementById('auto-generate-accounts-btn');
@@ -479,6 +564,7 @@
       const startNumberInput = document.getElementById('start-number');
       const autoDomainSelect = document.getElementById('auto-domain-select');
       const prefixAsPasswordRadio = document.getElementById('prefix-as-password');
+      const randomPasswordRadio = document.getElementById('random-password');
       const fixedPasswordRadio = document.getElementById('fixed-password');
       const fixedPasswordInput = document.getElementById('fixed-password-value');
       const cancelGenerateBtn = document.getElementById('cancel-generate');
@@ -507,15 +593,9 @@
         console.log('已获取自动生成邮箱按钮');
       }
       
-      let availableDomains = [];
-      
       // 初始化页面
       async function initializePage() {
         try {
-          // 先获取管理员密钥
-          adminKey = await getAdminKey();
-          console.log('已获取管理员密钥');
-          
           // 更新链接
           updateMailboxesLink();
           
@@ -533,19 +613,46 @@
         }
       }
       
-      // 获取管理员密钥
-      async function getAdminKey() {
-        try {
-          const response = await fetch('/api/admin/key');
-          if (!response.ok) {
-            throw new Error('获取管理员密钥失败，状态码: ' + response.status);
-          }
-          const data = await response.json();
-          return data.adminKey;
-        } catch (error) {
-          console.error('获取管理员密钥时出错:', error);
-          throw new Error('无法获取管理员密钥，请刷新页面重试');
+      // 登录处理函数
+      loginBtn.addEventListener('click', async () => {
+        const key = adminKeyInput.value.trim();
+        if (!key) {
+          showLoginError('请输入管理员密钥');
+          return;
         }
+        
+        try {
+          const response = await fetch(`/api/admin/prefixes?adminKey=${key}`);
+          
+          if (response.ok) {
+            // 登录成功
+            adminKey = key;
+            adminLoginSection.style.display = 'none';
+            adminContentSection.style.display = 'block';
+            
+            // 初始化管理界面
+            initializePage();
+          } else {
+            showLoginError('管理员密钥无效');
+          }
+        } catch (error) {
+          showLoginError('连接服务器时出错');
+          console.error('验证管理员密钥时出错:', error);
+        }
+      });
+      
+      // 显示登录错误信息
+      function showLoginError(message) {
+        loginError.textContent = message;
+        loginError.style.display = 'block';
+        setTimeout(() => {
+          loginError.style.display = 'none';
+        }, 5000);
+      }
+      
+      // 获取管理员密钥 - 不再使用此函数，留给测试环境
+      async function getAdminKey() {
+        return adminKey;
       }
       
       // 加载可用的域名列表
@@ -706,12 +813,12 @@
       
       // 显示当前页的前缀
       function displayCurrentPagePrefixes() {
-        prefixTableBody.innerHTML = '';
+        prefixesTable.innerHTML = '';
         
         if (!prefixesData || Object.keys(prefixesData).length === 0) {
           const row = document.createElement('tr');
           row.innerHTML = '<td colspan="7">没有找到邮箱</td>';
-          prefixTableBody.appendChild(row);
+          prefixesTable.appendChild(row);
           
           // 隐藏批量删除按钮
           batchDeleteBtn.style.display = 'none';
@@ -813,7 +920,7 @@
           <td class="action-buttons" style="white-space: nowrap;">${actionButtons}</td>
         `;
         
-        prefixTableBody.appendChild(row);
+        prefixesTable.appendChild(row);
       }
       
       // 添加事件处理程序
@@ -959,8 +1066,9 @@
       
       // 显示信息提示
       function showInfo(element, message) {
-        element.innerHTML = message.replace(/\n/g, '<br>');
+        element.textContent = message;
         element.style.display = 'block';
+        element.style.color = '#3498db';
       }
       
       // 更新动态生成的mailboxes链接
@@ -974,7 +1082,7 @@
       // 自动生成邮箱功能相关事件处理
       
       // 清空按钮
-      clearBatchBtn.addEventListener('click', () => {
+      cancelBatchImportBtn.addEventListener('click', () => {
         if (batchImportTextarea.value.trim() && !confirm('确定要清空输入框内容吗？')) {
           return;
         }
@@ -999,6 +1107,15 @@
             password = prefix;
           } else if (passwordType === 'fixed') {
             password = fixedPassword;
+          } else if (passwordType === 'random') {
+            // 生成8-12位随机密码，包含字母和数字
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const length = 8 + Math.floor(Math.random() * 5); // 8-12位
+            let randomPassword = '';
+            for (let j = 0; j < length; j++) {
+              randomPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            password = randomPassword;
           } else {
             password = prefix; // 默认使用前缀作为密码
           }
@@ -1063,11 +1180,11 @@
         let passwordType = 'prefix';
         let fixedPassword = '';
         
-        if (randomPasswordRadio.checked) {
+        if (document.getElementById('random-password').checked) {
           passwordType = 'random';
-        } else if (prefixAsPasswordRadio.checked) {
+        } else if (document.getElementById('prefix-as-password').checked) {
           passwordType = 'prefix';
-        } else if (fixedPasswordRadio.checked) {
+        } else if (document.getElementById('fixed-password').checked) {
           passwordType = 'fixed';
           fixedPassword = fixedPasswordInput.value.trim();
           
@@ -1097,6 +1214,8 @@
           let passwordTypeText = '与前缀相同的密码';
           if (passwordType === 'fixed') {
             passwordTypeText = `固定密码 "${fixedPassword}"`;
+          } else if (passwordType === 'random') {
+            passwordTypeText = '随机密码';
           }
           
           showSuccess(batchSuccess, `已生成 ${count} 个邮箱账号
@@ -1171,12 +1290,12 @@
         }
         
         // 显示批量导入提示
-        showInfo(importStatus, '正在处理批量导入请求...');
+        importStatus.textContent = '正在处理批量导入请求...';
         importStatus.style.color = '#3498db';
         
         const records = [];
         const invalidLines = [];
-        const usePrefixAsPassword = usePrefixAsPasswordCheckbox.checked;
+        const usePrefixAsPassword = usePrefixAsPasswordCheckbox ? usePrefixAsPasswordCheckbox.checked : false;
         
         // 解析每一行
         lines.forEach((line, index) => {
@@ -1209,7 +1328,7 @@
           } else {
             // 只有前缀，没有域名
             prefix = emailOrPrefix;
-            domain = null;
+            domain = domainSelect ? domainSelect.value : null; // 使用当前选择的域名
           }
           
           // 如果没有密码但启用了"使用前缀作为密码"选项
@@ -1239,7 +1358,7 @@
         importStatus.textContent = `正在导入 ${records.length} 条记录...`;
         
         try {
-          console.log('发送批量导入请求，数据:', { recordsCount: records.length });
+          console.log('发送批量导入请求，数据:', records);
           // 使用新的批量API
           const response = await fetch('/api/admin/batch-prefixes', {
             method: 'POST',
