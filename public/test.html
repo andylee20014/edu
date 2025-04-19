@@ -161,6 +161,28 @@
       align-items: center;
       margin-bottom: 20px;
     }
+
+    .detail-header {
+      background-color: #eaf7ff;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .meta-info {
+      margin-top: 10px;
+    }
+
+    .content-container {
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+
+    .email-text {
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -199,6 +221,19 @@
         <pre id="raw-data" style="display: none;"></pre>
       </div>
     </div>
+  </div>
+
+  <div id="email-detail" class="detail-header" style="display: none;">
+    <h3>邮件详情</h3>
+    <div class="meta-info">
+      <div><strong>发件人:</strong> <span id="email-from"></span></div>
+      <div><strong>收件人:</strong> <span id="email-to"></span></div>
+      <div><strong>日期:</strong> <span id="email-date"></span></div>
+    </div>
+  </div>
+
+  <div class="content-container">
+    <iframe id="email-html-frame" style="width:100%; border:none; min-height:400px;"></iframe>
   </div>
 
   <script>
@@ -459,6 +494,76 @@
           
           emailList.appendChild(emailItem);
         });
+      }
+
+      function displayEmailDetail(email) {
+        const detailDiv = document.getElementById('email-detail');
+        
+        // 检测是否有HTML内容
+        const hasHtml = email.html && email.html.trim().length > 0;
+        
+        // 创建格式化的邮件显示
+        detailDiv.innerHTML = `
+          <div class="detail-header">
+            <h3>${email.subject || '(无主题)'}</h3>
+            <div class="meta-info">
+              <div><strong>发件人:</strong> ${typeof email.from === 'string' ? email.from : JSON.stringify(email.from)}</div>
+              <div><strong>收件人:</strong> ${typeof email.to === 'string' ? email.to : JSON.stringify(email.to)}</div>
+              <div><strong>日期:</strong> ${email.date ? new Date(email.date).toLocaleString('zh-CN') : '未知'}</div>
+            </div>
+          </div>
+          <div class="content-container">
+            ${hasHtml 
+              ? `<iframe id="email-html-frame" style="width:100%; border:none; min-height:400px;"></iframe>` 
+              : `<pre class="email-text">${email.text || '(无文本内容)'}</pre>`}
+          </div>
+        `;
+        
+        // 如果是HTML邮件，使用iframe加载内容保留格式和链接
+        if (hasHtml) {
+          setTimeout(() => {
+            const iframe = document.getElementById('email-html-frame');
+            if (iframe) {
+              const doc = iframe.contentDocument || iframe.contentWindow.document;
+              doc.open();
+              const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                    body { 
+                      font-family: Arial, sans-serif; 
+                      line-height: 1.6;
+                      margin: 0;
+                      padding: 10px;
+                      word-wrap: break-word;
+                      overflow-wrap: break-word;
+                    }
+                    a { color: #0066cc; }
+                    img { max-width: 100%; height: auto; }
+                    table { max-width: 100%; }
+                    pre, code { white-space: pre-wrap; }
+                  </style>
+                </head>
+                <body>
+                  ${email.html}
+                </body>
+                </html>
+              `;
+              doc.write(htmlContent);
+              doc.close();
+              
+              // 调整iframe高度
+              iframe.onload = function() {
+                iframe.style.height = (iframe.contentWindow.document.body.scrollHeight + 20) + 'px';
+              };
+            }
+          }, 0);
+        }
+        
+        detailDiv.style.display = 'block';
       }
     });
   </script>

@@ -399,7 +399,7 @@ function fetchAllEmails(mailConfig) {
     });
     
     const emails = [];
-    const debug = { parsedEmails: [] };
+    let pendingEmails = 0;
     
     function openInbox(cb) {
       imap.openBox('INBOX', true, cb);
@@ -417,100 +417,79 @@ function fetchAllEmails(mailConfig) {
           
           if (!results || !results.length) {
             imap.end();
-            return resolve({ emails: [], debug: { totalEmails: 0 } });
+            return resolve([]);
           }
           
           console.log(`找到 ${results.length} 封邮件`);
+          pendingEmails = results.length;
           
-          // 获取所有邮件，而不仅仅是最近的
+          // 获取所有邮件
           const fetch = imap.fetch(results, {
-            bodies: ['HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE)', 'TEXT'],
+            bodies: '',  // 获取完整邮件内容
             struct: true
           });
           
           fetch.on('message', (msg, seqno) => {
-            const email = {
-              seqno,
-              headers: null,
-              body: null,
-              to: null,
-              from: null,
-              subject: null,
-              date: null,
-              fullParsed: null,
-            };
+            let fullMessage = '';
             
             msg.on('body', (stream, info) => {
-              let buffer = '';
               stream.on('data', (chunk) => {
-                buffer += chunk.toString('utf8');
+                fullMessage += chunk.toString('utf8');
               });
-              
-              stream.once('end', () => {
-                if (info.which.includes('HEADER')) {
-                  email.headers = buffer;
-                  // 解析头部信息
-                  const parsedHeader = Imap.parseHeader(buffer);
-                  email.to = parsedHeader.to;
-                  email.cc = parsedHeader.cc;
-                  email.bcc = parsedHeader.bcc;
-                  email.from = parsedHeader.from;
-                  email.subject = parsedHeader.subject;
-                  email.date = parsedHeader.date;
-                } else {
-                  email.body = buffer;
-                }
-              });
-            });
-            
-            msg.once('attributes', (attrs) => {
-              email.attrs = attrs;
             });
             
             msg.once('end', () => {
-              // 获取完整的原始邮件内容用于解析
-              simpleParser(email.headers + '\r\n\r\n' + email.body, (err, parsed) => {
+              // 使用mailparser解析完整邮件
+              simpleParser(fullMessage, (err, parsed) => {
                 if (err) {
                   console.error(`解析邮件 ${seqno} 时出错:`, err);
-                } else {
-                  email.fullParsed = {
-                    to: parsed.to,
-                    from: parsed.from,
-                    cc: parsed.cc,
-                    bcc: parsed.bcc,
-                    subject: parsed.subject,
-                    text: parsed.text
-                  };
-                  
-                  debug.parsedEmails.push({
-                    seqno,
-                    to: parsed.to ? JSON.parse(JSON.stringify(parsed.to)) : null,
-                    from: parsed.from ? JSON.parse(JSON.stringify(parsed.from)) : null,
-                    cc: parsed.cc ? JSON.parse(JSON.stringify(parsed.cc)) : null,
-                    bcc: parsed.bcc ? JSON.parse(JSON.stringify(parsed.bcc)) : null,
-                    subject: parsed.subject,
-                    date: parsed.date
-                  });
+                  pendingEmails--;
+                  checkAndFinalize();
+                  return;
                 }
-                emails.push(email);
+                
+                // 获取纯文本和HTML内容
+                let emailText = parsed.text || '';
+                let emailHtml = parsed.html || null;
+                
+                // 组装邮件信息
+                emails.push({
+                  seqno,
+                  from: parsed.from ? parsed.from.text : '未知',
+                  to: parsed.to ? (typeof parsed.to === 'string' ? parsed.to : parsed.to.text) : '未知',
+                  subject: parsed.subject || '(无主题)',
+                  date: parsed.date || new Date(),
+                  text: emailText,
+                  html: emailHtml
+                });
+                
+                pendingEmails--;
+                checkAndFinalize();
               });
             });
           });
           
           fetch.once('error', (err) => {
+            console.error('获取邮件时出错:', err);
             reject(err);
           });
           
           fetch.once('end', () => {
-            imap.end();
-            resolve({ 
-              emails, 
-              debug: {
-                totalEmails: results.length,
-                parsedEmails: debug.parsedEmails
-              }
-            });
+            console.log('所有邮件获取完毕，等待处理完成...');
           });
+          
+          function checkAndFinalize() {
+            if (pendingEmails <= 0) {
+              console.log(`处理完成，共有 ${emails.length} 封邮件`);
+              
+              // 按日期排序，最新的邮件放在前面
+              emails.sort((a, b) => new Date(b.date) - new Date(a.date));
+              
+              // 关闭IMAP连接并返回结果
+              imap.end();
+              resolve(emails);
+            }
+          }
         });
       });
     });
@@ -568,209 +547,185 @@ function fetchEmails(email, mailConfig) {
           
           // 获取所有邮件，不限制数量
           const fetch = imap.fetch(results, {
-            bodies: ['HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE)', 'TEXT'],
+            bodies: '',  // 获取完整邮件内容，包括所有部分
             struct: true
           });
           
           fetch.on('message', (msg, seqno) => {
-            let headerInfo = null;
-            let bodyInfo = "";
+            let fullMessage = '';
             
             msg.on('body', (stream, info) => {
-              let buffer = '';
               stream.on('data', (chunk) => {
-                buffer += chunk.toString('utf8');
-              });
-              
-              stream.once('end', () => {
-                if (info.which.includes('HEADER')) {
-                  headerInfo = Imap.parseHeader(buffer);
-                } else {
-                  bodyInfo = buffer;
-                }
+                fullMessage += chunk.toString('utf8');
               });
             });
             
             msg.once('end', () => {
-              // 必须等待两部分内容都获取完毕
-              if (headerInfo) {
-                // 解析完整邮件
-                simpleParser(
-                  // 构建一个简单的邮件格式
-                  `From: ${headerInfo.from ? headerInfo.from[0] : ''}\r\n` +
-                  `To: ${headerInfo.to ? headerInfo.to[0] : ''}\r\n` +
-                  `Subject: ${headerInfo.subject ? headerInfo.subject[0] : ''}\r\n` +
-                  `Date: ${headerInfo.date ? headerInfo.date[0] : ''}\r\n\r\n` +
-                  bodyInfo,
-                  (err, parsed) => {
-                    if (err) {
-                      console.error(`解析邮件 ${seqno} 时出错:`, err);
-                      pendingEmails--; // 减少待处理邮件计数
-                      checkAndFinalize(); // 检查是否所有邮件都处理完毕
-                      return;
+              // 使用mailparser解析完整邮件
+              simpleParser(fullMessage, (err, parsed) => {
+                if (err) {
+                  console.error(`解析邮件 ${seqno} 时出错:`, err);
+                  pendingEmails--; // 减少待处理邮件计数
+                  checkAndFinalize(); // 检查是否所有邮件都处理完毕
+                  return;
+                }
+                
+                // 详细检查邮件收件人 - 提取所有可能的收件人信息
+                let isMatch = false;
+                
+                // 检查方法1：直接检查headerInfo中的to字段
+                if (parsed.to && parsed.to.length > 0) {
+                  for (const to of parsed.to) {
+                    if (to.toLowerCase().includes(email.toLowerCase())) {
+                      isMatch = true;
+                      break;
                     }
-                    
-                    // 详细检查邮件收件人 - 提取所有可能的收件人信息
-                    let isMatch = false;
-                    
-                    // 检查方法1：直接检查headerInfo中的to字段
-                    if (headerInfo.to && headerInfo.to.length > 0) {
-                      for (const to of headerInfo.to) {
-                        if (to.toLowerCase().includes(email.toLowerCase())) {
-                          isMatch = true;
-                          break;
-                        }
-                      }
+                  }
+                }
+                
+                // 检查方法2：检查parsed.to字段
+                if (!isMatch && parsed.to) {
+                  // 不同格式的处理
+                  if (typeof parsed.to === 'string') {
+                    if (parsed.to.toLowerCase().includes(email.toLowerCase())) {
+                      isMatch = true;
                     }
-                    
-                    // 检查方法2：检查parsed.to字段
-                    if (!isMatch && parsed.to) {
-                      // 不同格式的处理
-                      if (typeof parsed.to === 'string') {
-                        if (parsed.to.toLowerCase().includes(email.toLowerCase())) {
-                          isMatch = true;
-                        }
-                      } else if (parsed.to.text) {
-                        if (parsed.to.text.toLowerCase().includes(email.toLowerCase())) {
-                          isMatch = true;
-                        }
-                      } else if (parsed.to.value && Array.isArray(parsed.to.value)) {
-                        // 处理邮件解析库可能返回的数组格式
-                        for (const addr of parsed.to.value) {
-                          if (addr.address && addr.address.toLowerCase() === email.toLowerCase()) {
-                            isMatch = true;
-                            break;
-                          }
-                        }
+                  } else if (parsed.to.text) {
+                    if (parsed.to.text.toLowerCase().includes(email.toLowerCase())) {
+                      isMatch = true;
+                    }
+                  } else if (parsed.to.value && Array.isArray(parsed.to.value)) {
+                    // 处理邮件解析库可能返回的数组格式
+                    for (const addr of parsed.to.value) {
+                      if (addr.address && addr.address.toLowerCase() === email.toLowerCase()) {
+                        isMatch = true;
+                        break;
                       }
                     }
-                    
-                    // 检查方法3：检查抄送字段
-                    if (!isMatch && parsed.cc) {
-                      if (typeof parsed.cc === 'string') {
-                        if (parsed.cc.toLowerCase().includes(email.toLowerCase())) {
-                          isMatch = true;
-                        }
-                      } else if (parsed.cc.text) {
-                        if (parsed.cc.text.toLowerCase().includes(email.toLowerCase())) {
-                          isMatch = true;
-                        }
-                      } else if (parsed.cc.value && Array.isArray(parsed.cc.value)) {
-                        for (const addr of parsed.cc.value) {
-                          if (addr.address && addr.address.toLowerCase() === email.toLowerCase()) {
-                            isMatch = true;
-                            break;
-                          }
-                        }
+                  }
+                }
+                
+                // 检查方法3：检查抄送字段
+                if (!isMatch && parsed.cc) {
+                  if (typeof parsed.cc === 'string') {
+                    if (parsed.cc.toLowerCase().includes(email.toLowerCase())) {
+                      isMatch = true;
+                    }
+                  } else if (parsed.cc.text) {
+                    if (parsed.cc.text.toLowerCase().includes(email.toLowerCase())) {
+                      isMatch = true;
+                    }
+                  } else if (parsed.cc.value && Array.isArray(parsed.cc.value)) {
+                    for (const addr of parsed.cc.value) {
+                      if (addr.address && addr.address.toLowerCase() === email.toLowerCase()) {
+                        isMatch = true;
+                        break;
                       }
                     }
+                  }
+                }
+                
+                // 如果找到匹配，保存这封邮件
+                if (isMatch) {
+                  console.log(`找到发送给 ${email} 的邮件: ${parsed.subject}`);
+                  
+                  // 获取正文内容 - 完全依赖mailparser提供的内容
+                  let emailText = '';
+                  let emailHtml = null;
+                  
+                  // 检查是否有HTML内容
+                  if (parsed.html) {
+                    // 有HTML内容时，优先使用HTML
+                    emailHtml = parsed.html;
+                  }
+                  
+                  // 获取纯文本内容
+                  if (parsed.text) {
+                    emailText = parsed.text;
+                  } else if (emailHtml) {
+                    // 如果没有纯文本但有HTML，尝试从HTML提取文本
+                    emailText = emailHtml.replace(/<[^>]+>/g, ' ')
+                                        .replace(/\s+/g, ' ')
+                                        .trim();
+                  }
+                  
+                  // 提取可能的Base64编码内容 (适用于邮件客户端使用Base64编码发送中文的情况)
+                  const base64Blocks = [];
+                  
+                  // 从text中查找可能的Base64编码块
+                  if (emailText) {
+                    const lines = emailText.split(/\r?\n/);
+                    let inBase64Block = false;
+                    let currentBlock = '';
                     
-                    // 如果找到匹配，保存这封邮件
-                    if (isMatch) {
-                      console.log(`找到发送给 ${email} 的邮件: ${parsed.subject}`);
-                      
-                      // 获取正文内容 - 完全依赖mailparser提供的内容
-                      let emailText = '';
-                      let emailHtml = null;
-                      
-                      // 检查是否有HTML内容
-                      if (parsed.html) {
-                        // 有HTML内容时，优先使用HTML
-                        emailHtml = parsed.html;
+                    for (const line of lines) {
+                      // 检测Content-Transfer-Encoding: base64标记
+                      if (line.match(/Content-Transfer-Encoding:\s*base64/i)) {
+                        inBase64Block = true;
+                        currentBlock = '';
+                        continue;
                       }
                       
-                      // 获取纯文本内容
-                      if (parsed.text) {
-                        emailText = parsed.text;
-                      } else if (emailHtml) {
-                        // 如果没有纯文本但有HTML，尝试从HTML提取文本
-                        emailText = emailHtml.replace(/<[^>]+>/g, ' ')
-                                            .replace(/\s+/g, ' ')
-                                            .trim();
-                      }
-                      
-                      // 提取可能的Base64编码内容 (适用于邮件客户端使用Base64编码发送中文的情况)
-                      const base64Blocks = [];
-                      
-                      // 从text中查找可能的Base64编码块
-                      if (emailText) {
-                        const lines = emailText.split(/\r?\n/);
-                        let inBase64Block = false;
-                        let currentBlock = '';
-                        
-                        for (const line of lines) {
-                          // 检测Content-Transfer-Encoding: base64标记
-                          if (line.match(/Content-Transfer-Encoding:\s*base64/i)) {
-                            inBase64Block = true;
-                            currentBlock = '';
-                            continue;
-                          }
-                          
-                          // 检测是否为MIME边界行，如果是则结束当前块
-                          if (line.match(/^--[a-f0-9]{16,}/)) {
-                            if (inBase64Block && currentBlock) {
-                              base64Blocks.push(currentBlock);
-                            }
-                            inBase64Block = false;
-                            continue;
-                          }
-                          
-                          // 在Base64块中收集内容
-                          if (inBase64Block && line.trim() && line.match(/^[A-Za-z0-9+/=]+$/)) {
-                            currentBlock += line.trim();
-                          }
-                        }
-                        
-                        // 处理最后一个块
+                      // 检测是否为MIME边界行，如果是则结束当前块
+                      if (line.match(/^--[a-f0-9]{16,}/)) {
                         if (inBase64Block && currentBlock) {
                           base64Blocks.push(currentBlock);
                         }
+                        inBase64Block = false;
+                        continue;
                       }
                       
-                      // 尝试解码所有找到的Base64块
-                      for (const block of base64Blocks) {
-                        try {
-                          const decoded = Buffer.from(block, 'base64').toString('utf8');
-                          if (decoded && decoded.trim() && !/^\s+$/.test(decoded)) {
-                            // 如果解码成功且内容有意义，替换原始文本
-                            emailText = decoded.trim();
-                            break;
-                          }
-                        } catch (e) {
-                          console.log('Base64块解码失败:', e);
-                        }
+                      // 在Base64块中收集内容
+                      if (inBase64Block && line.trim() && line.match(/^[A-Za-z0-9+/=]+$/)) {
+                        currentBlock += line.trim();
                       }
-                      
-                      // 最终清理 - 移除所有可能的邮件头和MIME边界
-                      emailText = emailText
-                        // 移除Content-开头的行
-                        .replace(/^Content-[^\r\n]+[\r\n]*/gm, '')
-                        // 移除MIME边界行
-                        .replace(/^--[a-f0-9]{16,}[^\r\n]*[\r\n]*/gm, '')
-                        // 移除空行
-                        .replace(/(\r?\n){2,}/g, '\n\n')
-                        .trim();
-                      
-                      // 组装邮件内容
-                      emails.push({
-                        from: parsed.from ? parsed.from.text : '未知',
-                        subject: parsed.subject || '(无主题)',
-                        date: parsed.date || new Date(),
-                        text: emailText || '无内容',
-                        html: emailHtml
-                      });
-                      
-                      console.log(`成功提取邮件内容: "${emailText.substring(0, 50)}${emailText.length > 50 ? '...' : ''}"`);
                     }
                     
-                    pendingEmails--; // 减少待处理邮件计数
-                    checkAndFinalize(); // 检查是否所有邮件都处理完毕
+                    // 处理最后一个块
+                    if (inBase64Block && currentBlock) {
+                      base64Blocks.push(currentBlock);
+                    }
                   }
-                );
-              } else {
+                  
+                  // 尝试解码所有找到的Base64块
+                  for (const block of base64Blocks) {
+                    try {
+                      const decoded = Buffer.from(block, 'base64').toString('utf8');
+                      if (decoded && decoded.trim() && !/^\s+$/.test(decoded)) {
+                        // 如果解码成功且内容有意义，替换原始文本
+                        emailText = decoded.trim();
+                        break;
+                      }
+                    } catch (e) {
+                      console.log('Base64块解码失败:', e);
+                    }
+                  }
+                  
+                  // 最终清理 - 移除所有可能的邮件头和MIME边界
+                  emailText = emailText
+                    // 移除Content-开头的行
+                    .replace(/^Content-[^\r\n]+[\r\n]*/gm, '')
+                    // 移除MIME边界行
+                    .replace(/^--[a-f0-9]{16,}[^\r\n]*[\r\n]*/gm, '')
+                    // 移除空行
+                    .replace(/(\r?\n){2,}/g, '\n\n')
+                    .trim();
+                  
+                  // 组装邮件内容
+                  emails.push({
+                    from: parsed.from ? parsed.from.text : '未知',
+                    subject: parsed.subject || '(无主题)',
+                    date: parsed.date || new Date(),
+                    text: emailText || '无内容',
+                    html: parsed.html || null
+                  });
+                  
+                  console.log(`成功提取邮件内容: "${emailText.substring(0, 50)}${emailText.length > 50 ? '...' : ''}"`);
+                }
+                
                 pendingEmails--; // 减少待处理邮件计数
                 checkAndFinalize(); // 检查是否所有邮件都处理完毕
-              }
+              });
             });
           });
           

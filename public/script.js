@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const errorMessage = document.getElementById('error-message');
   const resultsContainer = document.getElementById('results-container');
   const emailList = document.getElementById('email-list');
-  const emailDetail = document.getElementById('email-detail');
   const pollingIndicator = document.getElementById('polling-indicator');
   const statusText = document.getElementById('status-text');
   const lastCheckTime = document.getElementById('last-check-time');
@@ -135,7 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isInitialCheck) {
       loader.style.display = 'block';
       resultsContainer.style.display = 'none';
-      emailDetail.style.display = 'none';
+      // 隐藏所有可能显示的邮件详情
+      document.querySelectorAll('.email-detail').forEach(detail => {
+        detail.style.display = 'none';
+      });
     }
     
     try {
@@ -269,6 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
       
       console.log(`处理邮件 #${index}: ${email.subject || '(无主题)'}`);
       
+      // 创建邮件容器，包含邮件项和邮件详情
+      const emailContainer = document.createElement('div');
+      emailContainer.className = 'email-container';
+      
       // 邮件内容不再需要额外清理，直接使用服务器处理好的内容
       const emailItem = document.createElement('div');
       emailItem.className = 'email-item';
@@ -281,11 +287,43 @@ document.addEventListener('DOMContentLoaded', () => {
         <p>${email.text ? (email.text.substring(0, 100) + (email.text.length > 100 ? '...' : '')) : '无内容'}</p>
       `;
       
+      // 创建邮件详情容器，初始隐藏
+      const emailDetailContainer = document.createElement('div');
+      emailDetailContainer.className = 'email-detail';
+      emailDetailContainer.style.display = 'none';
+      emailDetailContainer.setAttribute('data-email-id', index);
+      
+      // 将两部分添加到容器中
+      emailContainer.appendChild(emailItem);
+      emailContainer.appendChild(emailDetailContainer);
+      
+      // 点击邮件项时切换详情的显示/隐藏
       emailItem.addEventListener('click', () => {
-        displayEmailDetail(email);
+        // 检查当前是否已显示详情
+        const isDetailVisible = emailDetailContainer.style.display !== 'none';
+        
+        // 如果已经显示，则隐藏
+        if (isDetailVisible) {
+          emailDetailContainer.style.display = 'none';
+          return;
+        }
+        
+        // 隐藏所有其他邮件详情
+        document.querySelectorAll('.email-detail').forEach(detail => {
+          detail.style.display = 'none';
+        });
+        
+        // 显示该邮件的详情
+        displayEmailDetail(email, emailDetailContainer);
+        emailDetailContainer.style.display = 'block';
+        
+        // 平滑滚动到详情区域
+        setTimeout(() => {
+          emailDetailContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
       });
       
-      emailList.appendChild(emailItem);
+      emailList.appendChild(emailContainer);
     });
     
     // 确保结果容器可见
@@ -295,27 +333,71 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`显示了 ${emails.length} 封邮件`);
   }
   
-  function displayEmailDetail(email) {
-    // 邮件内容已经在服务器处理好，直接显示
-    
+  function displayEmailDetail(email, container) {
     // 处理纯文本内容
     let textContent = email.text || '';
     
     // 检测是否是HTML邮件
     const hasHtml = email.html && email.html.trim().length > 0;
     
-    emailDetail.innerHTML = `
+    container.innerHTML = `
       <h3>${email.subject || '(无主题)'}</h3>
       <div class="email-meta">
         <div>发件人: ${email.from}</div>
         <div>日期: ${new Date(email.date).toLocaleString('zh-CN')}</div>
       </div>
       <div class="email-content">
-        ${hasHtml ? email.html : `<pre style="white-space: pre-wrap; word-break: break-all;">${textContent}</pre>`}
+        ${hasHtml 
+          ? `<iframe class="email-html-frame" style="width:100%; border:none; min-height:400px;"></iframe>` 
+          : `<pre style="white-space: pre-wrap; word-break: break-word;">${textContent}</pre>`}
       </div>
     `;
     
-    emailDetail.style.display = 'block';
+    // 如果是HTML邮件，使用iframe加载HTML内容以保留原始格式和链接
+    if (hasHtml && email.html) {
+      // 等待DOM更新后设置iframe内容
+      setTimeout(() => {
+        const iframe = container.querySelector('.email-html-frame');
+        if (iframe) {
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          doc.open();
+          // 添加基础样式使内容自适应
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { 
+                  font-family: Arial, sans-serif; 
+                  line-height: 1.6;
+                  margin: 0;
+                  padding: 10px;
+                  word-wrap: break-word;
+                  overflow-wrap: break-word;
+                }
+                a { color: #0066cc; }
+                img { max-width: 100%; height: auto; }
+                table { max-width: 100%; }
+                pre, code { white-space: pre-wrap; }
+              </style>
+            </head>
+            <body>
+              ${email.html}
+            </body>
+            </html>
+          `;
+          doc.write(htmlContent);
+          doc.close();
+          
+          // 调整iframe高度以适应内容
+          iframe.onload = function() {
+            iframe.style.height = (iframe.contentWindow.document.body.scrollHeight + 20) + 'px';
+          };
+        }
+      }, 0);
+    }
   }
   
   // 添加新函数来处理新邮件的添加
@@ -343,6 +425,10 @@ document.addEventListener('DOMContentLoaded', () => {
       
       console.log(`添加新邮件 #${index}: ${email.subject || '(无主题)'}`);
       
+      // 创建邮件容器，包含邮件项和邮件详情
+      const emailContainer = document.createElement('div');
+      emailContainer.className = 'email-container';
+      
       const emailItem = document.createElement('div');
       emailItem.className = 'email-item';
       emailItem.innerHTML = `
@@ -354,13 +440,41 @@ document.addEventListener('DOMContentLoaded', () => {
         <p>${email.text ? email.text.substring(0, 100) + (email.text.length > 100 ? '...' : '') : '无内容'}</p>
       `;
       
-      // 添加点击事件
-      emailItem.addEventListener('click', () => {
-        displayEmailDetail(email);
-      });
+      // 创建邮件详情容器，初始隐藏
+      const emailDetailContainer = document.createElement('div');
+      emailDetailContainer.className = 'email-detail';
+      emailDetailContainer.style.display = 'none';
+      emailDetailContainer.setAttribute('data-email-id', Date.now() + index); // 确保唯一ID
       
-      // 在列表顶部添加新邮件
-      emailList.insertBefore(emailItem, emailList.firstChild);
+      // 将两部分添加到容器中
+      emailContainer.appendChild(emailItem);
+      emailContainer.appendChild(emailDetailContainer);
+      
+      // 点击邮件项时切换详情的显示/隐藏
+      emailItem.addEventListener('click', () => {
+        // 检查当前是否已显示详情
+        const isDetailVisible = emailDetailContainer.style.display !== 'none';
+        
+        // 如果已经显示，则隐藏
+        if (isDetailVisible) {
+          emailDetailContainer.style.display = 'none';
+          return;
+        }
+        
+        // 隐藏所有其他邮件详情
+        document.querySelectorAll('.email-detail').forEach(detail => {
+          detail.style.display = 'none';
+        });
+        
+        // 显示该邮件的详情
+        displayEmailDetail(email, emailDetailContainer);
+        emailDetailContainer.style.display = 'block';
+        
+        // 平滑滚动到详情区域
+        setTimeout(() => {
+          emailDetailContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      });
       
       // 添加高亮效果
       emailItem.classList.add('new-email');
@@ -368,6 +482,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         emailItem.classList.remove('new-email');
       }, 3000);
+      
+      // 在列表顶部添加新邮件
+      emailList.insertBefore(emailContainer, emailList.firstChild);
     });
     
     // 确保结果容器显示
